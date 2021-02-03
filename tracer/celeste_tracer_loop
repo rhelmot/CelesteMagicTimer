@@ -1,0 +1,6 @@
+#!/bin/sh
+
+while true; do
+	$(dirname $0)/celeste_tracer --attach "$@"
+	sleep 5
+done

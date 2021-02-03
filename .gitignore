@@ -1,0 +1,8 @@
+autosplitterinfo
+*.txt
+*.pb
+*.route
+*.best
+*.gdb
+*.desktop
+*.pyc
