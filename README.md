@@ -3,6 +3,8 @@ rhelmot's Celeste Magic Timer
 
 This is an autosplitter for Celeste on Linux, working on all versions and also with Everest installed. I guess it could theoretically be made to work on other games but why would you do that?
 
+**This is a complicated piece of software!** I am more than happy to help anyone who wants to use this learn this. There's a lot you can do with this program once you really know what you're doing.
+
 The Tracer
 ----------
 
