@@ -449,6 +449,24 @@ class SplitsManager:
                 else:
                     break
 
+def parse_mapname(line):
+    if line.lower() == 'farewell':
+        return 10, 0
+    if line.lower() == 'prologue':
+        return 0, 0
+
+    if line.isdigit():
+        side = 'a'
+    else:
+        line, side = line[:-1], line[-1]
+        side = side.lower()
+    assert side in ('a', 'b', 'c')
+    mode = ord(side) - ord('a')
+    chapter = int(line)
+    if chapter >= 8:
+        chapter += 1
+    return chapter, mode
+
 def _main():
     asi = AutoSplitterInfo()
     max_width = max(len(attr) for attr in asi.all_attrs)

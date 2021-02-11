@@ -1,6 +1,7 @@
 import sys
+import functools
 from celeste_timer import fmt_time
-from full_splits import main
+from full_splits import main, print_splits
 
 def fmt_time_ex(time, meaningful, sign=False):
     if meaningful is None:
@@ -86,7 +87,7 @@ def generate_stats(sm, split, level):
     }
 
 
-def render_stream(sm):
+def format_stream(sm):
     split_cur_chapter = sm.current_split(0)
     split_cur_segment = sm.current_split(1)
     split_prev_chapter = sm.previous_split(0)
@@ -164,4 +165,4 @@ def render_stream(sm):
 
 if __name__ == '__main__':
     sys.stdout.write("\x1b]2;streamdisplay\x07")
-    main(sys.argv[1], renderer=render_stream)
+    main(sys.argv[1], renderer=functools.partial(print_splits, formatter=format_stream))
