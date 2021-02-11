@@ -12,7 +12,7 @@ The first component of the setup is the tracer. This is a program which reads Ce
 
 The tracer can operate in two modes - one where it launches Celeste itself and thus does not require elevated priveleges, and one where you launch it as root and it attaches to the Celeste process. These, along with the path where you want the autosplitter data dumped, are specified on the command line.
 
-The way I've set it up is to have a loop always running in the background which is constantly trying to connect to any running Celeste instances. In order to do this securely, I've put the relevant paths in `celeste_tracer_loop_mine.c` and compiled it as a setuid binary - this means that it can be easily run with root priveleges on login if you changes the paths in the C source to work correctly on your computer.
+The way I've set it up is to have a loop always running in the background which is constantly trying to connect to any running Celeste instances. In order to do this securely, I've put the relevant paths in `celeste_tracer_loop_mine.c` and compiled it as a setuid binary - this means that it can be easily run with root priveleges on login if you change the paths in the C source to work correctly on your computer.
 
 ### How does it work?
 
