@@ -7,6 +7,7 @@ autosplitterinfo
 *.desktop
 *.pyc
 
+
 # Part that deals with the c-code
 
 celeste_tracer
@@ -15,7 +16,8 @@ celeste_tracer_loop_mine
 # Deals with pycharm
 .idea
 
-
+# Enables requirements.txt
+!requirements.txt
 
 
 # This is the default gitignore-Python Template
