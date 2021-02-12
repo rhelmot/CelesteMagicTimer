@@ -5,7 +5,9 @@
 
 from celeste_timer import * # pylint: disable=wildcard-import,unused-wildcard-import
 
+import os
 import time
+import functools
 import gi
 import subprocess
 gi.require_version('Notify', '0.7')
@@ -281,12 +283,15 @@ def render_split(sm, split, level):
         cols = render_past_split(sm, split, level)
     else:
         cols = render_upcoming_split(sm, split, level)
-    #if level != split.level:
-    #    cols = (('<--',),) + cols[1:]
     return render_line(cols, level, [35, 20, 20])
 
-def render_splits(sm):
-    data = ''
+def format_splits(sm, termsize=True):
+    if termsize:
+        _, term_rows = os.get_terminal_size()
+    else:
+        _, term_rows = 100000, 100000
+
+    rows = []
     last_level = 0
     for i, split in enumerate(sm.route.splits):
         if split.level > last_level:
@@ -295,17 +300,47 @@ def render_splits(sm):
                 j = i + 1
                 while True:
                     if sm.route.splits[j].level == target_level:
-                        data += render_split(sm, sm.route.splits[j], target_level)
+                        rows.append((sm.route.splits[j], target_level))
                         break
                     j += 1
                 target_level += 1
-            data += render_split(sm, split, split.level)
+            rows.append((split, split.level))
         elif split.level < last_level:
-            data += render_split(sm, split, last_level)
+            rows.append((split, last_level))
         else:
-            data += render_split(sm, split, split.level)
+            rows.append((split, split.level))
         last_level = split.level
-    return data
+
+    refsplit = sm.current_split(1000)
+    current_idx = len(rows) - 1
+    for i, (split, _) in enumerate(rows):
+        if split is refsplit:
+            current_idx = i
+
+    bottom_row = [rows[-1]] if current_idx != len(rows) - 1 else []
+    prev_rows = rows[:current_idx]
+    later_rows = rows[current_idx+1:-1]
+
+    render_rows = [rows[current_idx]]
+    current_render_idx = 0
+    if len(render_rows) < term_rows:
+        render_rows.extend(bottom_row)
+    while len(render_rows) < term_rows and prev_rows:
+        render_rows.insert(0, prev_rows.pop(-1))
+        current_render_idx += 1
+    later_rows_added = 0
+    while len(render_rows) < term_rows and later_rows:
+        render_rows.insert(current_render_idx + 1 + later_rows_added, later_rows.pop(0))
+        later_rows_added += 1
+    while len(render_rows) < term_rows:
+        render_rows.insert(-1, (None, None))
+
+
+    data = ''.join(render_split(sm, split, level) if split is not None else '\n' for split, level in render_rows)
+    return data.rstrip()
+
+def print_splits(sm, formatter):
+    print('\x1b\x5b\x48\x1b\x5b\x4a' + '\x1b\x5b\x3f\x32\x35\x6c' + formatter(sm), end='')
 
 def main(route, pb=None, best=None, renderer=None):
     if pb is None and best is None and type(route) is str:
@@ -314,7 +349,7 @@ def main(route, pb=None, best=None, renderer=None):
     asi = AutoSplitterInfo()
     pb_filename = None
     if renderer is None:
-        renderer = render_splits
+        renderer = functools.partial(print_splits, formatter=format_splits)
 
     if type(route) is str:
         with open(route, 'rb') as fp:
@@ -356,7 +391,7 @@ def main(route, pb=None, best=None, renderer=None):
 
 
                 sm.update()
-                print('\x1b\x5b\x48\x1b\x5b\x4a' + renderer(sm))
+                renderer(sm)
 
                 global cancel_show_at
                 if cancel_show_at is not None and time.time() >= cancel_show_at:
