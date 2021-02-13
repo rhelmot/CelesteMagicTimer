@@ -23,11 +23,16 @@ def notify(title, body, timeout):
     global cancel_show_at
     cancel_show_at = time.time() + timeout
 
+notify_level = int(os.environ.get('NOTIFY_SPLIT_LEVEL', 0))
+
 import pynput
 action_queue = []
 ctrled = shifted = False
 def should_handle_key():
-    res = subprocess.check_output(['xdotool', 'getactivewindow', 'getwindowname']).strip().decode()
+    try:
+        res = subprocess.check_output(['xdotool', 'getactivewindow', 'getwindowname']).strip().decode()
+    except subprocess.CalledProcessError:
+        return False
     return res in ('Celeste', 'streamdisplay')
 
 def handle_key(key):
@@ -121,7 +126,8 @@ class NotifSplitsManager(SplitsManager):
             pieces.append('%s: %s' % (split.level_name(0), str_0))
         pieces.append('Time: ' + str_top)
         out_str = ' == '.join(pieces)
-        notify('Split', out_str, 10)
+        if split.level <= notify_level:
+            notify('Split', out_str, 10)
 
 
 def show_splits(route, splits):
