@@ -345,6 +345,7 @@ void *dump_info_loop(void *v) {
     }
     load_base_info(memfd);
     uint64_t info_addr = locate_autosplitter_info(memfd);
+    DBGPRINT("ASI @ %p\n", info_addr);
     uint64_t savedata_addr = 0;
     uint64_t mode_stats = 0;
 

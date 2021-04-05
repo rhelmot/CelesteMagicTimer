@@ -3,14 +3,12 @@
 # copyright 2021 rhelmot. redistribution is permitted for any purpose provided this copyright notice is kept intact.
 # this program comes with absolutely no warranty including fitness for blah blah blah
 
+import os
 import struct
-import pickle
-import sys
 import threading
 import time
 import collections
 import random
-import pprint
 
 # 00 string Level;
 # 08 int Chapter;
@@ -27,6 +25,8 @@ import pprint
 # 34 int FileCassettes;
 # 38 int FileHearts;
 # 40 int CurrentChapterCheckpoints;
+
+asi_path = os.path.join(os.path.dirname(__file__), '../autosplitterinfo')
 
 def split_time(filetime):
     neg = filetime < 0
@@ -79,7 +79,7 @@ def fmt_time(tup, ms_decimals=3, full_width=False, sign=False):
 
 
 class AutoSplitterInfo:
-    def __init__(self, filename='../autosplitterinfo'):
+    def __init__(self, filename=asi_path):
         self.all_attrs = ('chapter', 'mode', 'timer_active', 'chapter_started', 'chapter_complete', 'chapter_time', 'chapter_strawberries', 'chapter_cassette', 'chapter_heart', 'file_time', 'file_strawberries', 'file_cassettes', 'file_hearts', 'chapter_checkpoints', 'in_cutscene', 'death_count', "level_name")
         self.chapter = 0
         self.mode = 0

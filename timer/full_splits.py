@@ -10,6 +10,7 @@ import time
 import functools
 import gi
 import subprocess
+import pickle
 gi.require_version('Notify', '0.7')
 from gi.repository import Notify
 Notify.init("celeste_timer")
