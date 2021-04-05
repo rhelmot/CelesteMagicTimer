@@ -29,7 +29,7 @@ The next-most important script is `edit_splits.py`. This should allow you to cre
 
 The next-most important scripts are the `make_*_splits.py` files. These are programs which interactively construct a route file for you with some common templates.
 
-Finally, we hae `stream.py`, which is another autosplitter program which formats its data in a stream-friendly format. This one has much better coding standards, and should be used as a base if you want to write your own display program.
+Finally, we have `stream.py`, which is another autosplitter program which formats its data in a stream-friendly format. This one has much better coding standards, and should be used as a base if you want to write your own display program.
 
 Contributing
 ------------
