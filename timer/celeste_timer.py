@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
 
-# copyright 2021 rhelmot. redistribution is permitted for any purpose provided this copyright notice is kept intact.
-# this program comes with absolutely no warranty including fitness for blah blah blah
-
 import os
 import struct
 import threading

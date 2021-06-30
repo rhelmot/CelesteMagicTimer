@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
 
-# copyright 2021 rhelmot. redistribution is permitted for any purpose provided this copyright notice is kept intact.
-# this program comes with absolutely no warranty including fitness for blah blah blah
-
 from celeste_timer import * # pylint: disable=wildcard-import,unused-wildcard-import
 
 import os
@@ -14,7 +11,7 @@ import pickle
 gi.require_version('Notify', '0.7')
 from gi.repository import Notify
 Notify.init("celeste_timer")
-berry = 'Celeste.png'
+berry = os.path.join(os.path.dirname(__file__), 'Celeste.png')
 n = Notify.Notification.new('', '', berry)
 n.set_urgency(2)
 cancel_show_at = None
