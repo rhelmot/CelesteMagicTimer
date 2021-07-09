@@ -342,7 +342,7 @@ void *dump_info_loop(void *v) {
         perror("could not create fifo");
         exit(1);
     }
-    int dumpfd = open(filename, O_RDWR);
+    int dumpfd = open(filename, O_RDWR | O_NONBLOCK);
     if (dumpfd < 0) {
         perror("open info dump file");
         exit(1);
@@ -438,7 +438,6 @@ void *dump_info_loop(void *v) {
             info_buf.InCutscene = false;
         }
 
-        lseek(dumpfd, 0, SEEK_SET);
         write(dumpfd, &info_buf, sizeof(DumpInfo));
     }
 }
