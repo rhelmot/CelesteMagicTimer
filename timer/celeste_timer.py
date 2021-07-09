@@ -135,8 +135,7 @@ class AutoSplitterInfo:
         fmtstring = struct.Struct('Qii???QI??QIIIxxxxI?i100s')
         while self.live:
             last_tick = time.time()
-            self.fp.seek(0)
-            dat = self.fp.raw.read(fmtstring.size)
+            dat = self.fp.read(fmtstring.size)
             _, self.chapter, self.mode, self.timer_active, \
                 self.chapter_started, self.chapter_complete, \
                 chapter_time, self.chapter_strawberries, \

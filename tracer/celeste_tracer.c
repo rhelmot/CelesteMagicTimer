@@ -10,6 +10,7 @@
 #include <libgen.h>
 #include <dirent.h>
 #include <sys/fcntl.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/ptrace.h>
 #include <sys/wait.h>
@@ -335,7 +336,13 @@ void *dump_info_loop(void *v) {
     const char *filename = m->filename;
 
     sleep(2);
-    int dumpfd = open(filename, O_RDWR | O_CREAT, 0644);
+    unlink(filename);
+    int fifo = mkfifo(filename, 0644);
+    if (fifo < 0) {
+        perror("could not create fifo");
+        exit(1);
+    }
+    int dumpfd = open(filename, O_RDWR);
     if (dumpfd < 0) {
         perror("open info dump file");
         exit(1);
