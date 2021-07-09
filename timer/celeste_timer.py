@@ -134,7 +134,6 @@ class AutoSplitterInfo:
     def update_loop(self):
         fmtstring = struct.Struct('Qii???QI??QIIIxxxxI?i100s')
         while self.live:
-            last_tick = time.time()
             dat = self.fp.read(fmtstring.size)
             _, self.chapter, self.mode, self.timer_active, \
                 self.chapter_started, self.chapter_complete, \
@@ -147,10 +146,6 @@ class AutoSplitterInfo:
             self.chapter_time = chapter_time // 10000
             self.file_time = file_time // 10000
             self.level_name = level_name.split(b'\0')[0].decode()
-
-            timeout = last_tick + 0.001 - time.time()
-            if timeout > 0:
-                time.sleep(timeout)
 
 class Trigger:
     def __init__(self, name, end_trigger):
