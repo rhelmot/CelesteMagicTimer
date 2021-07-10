@@ -31,6 +31,11 @@ The next-most important scripts are the `make_*_splits.py` files. These are prog
 
 Finally, we have `stream.py`, which is another autosplitter program which formats its data in a stream-friendly format. This one has much better coding standards, and should be used as a base if you want to write your own display program.
 
+The Route Format
+----------------
+
+When using `edit_splits.py`, you are given the ability to create a sequence of "triggers" and "splits". During gameplay, the autosplitter keeps track of where in this sequence you are, starting at the beginning and proceeding past each trigger when its condition is met. Whenever you pass a split, the autosplitter will split. The display will show you the splits, but not the triggers.
+
 Contributing
 ------------
 

@@ -59,7 +59,10 @@ def edit(pieces):
             elif args[0] == 'delete':
                 pieces.pop(cursor)
             elif args[0] == 'split':
-                pieces.insert(cursor, Split([' '.join(args[1:])]))
+                pieces.insert(cursor, Split([' '.join(args[1:])]), level=0)
+                cursor += 1
+            elif args[0] == 'subsplit':
+                pieces.insert(cursor, Split([' '.join(args[1:])]), level=1)
                 cursor += 1
             elif args[0] == 'rename':
                 if isinstance(pieces[cursor], Split):
@@ -86,13 +89,37 @@ def edit(pieces):
                 berries = int(args[1])
                 pieces.insert(cursor, Trigger('%d berries' % berries, 'asi.file_strawberries == %d' % berries))
                 cursor += 1
+            elif args[0] == 'room':
+                pieces.insert(cursor, Trigger('Room %s' % args[1], 'asi.level == %r' % args[1]))
+                cursor += 1
+            elif args[0] == 'checkpoint':
+                cp = int(args[1])
+                pieces.insert(cursor, Trigger('Reach checkpoint %d' % cp, 'asi.chapter_checkpoints == %d' % cp))
+                cursor += 1
             elif args[0] == 'quit':
                 if len(pieces) == 0 or type(pieces[-1]) is not Split or pieces[-1].level != 0:
                     raise TypeError("Last piece of route must be a split")
                 return pieces
             elif args[0] == 'help':
                 inhibit = True
-                print("Commands: goto <idx>, delete, split <name>, rename <name>, overworld, chapter <numberletter>, complete, cassette, heart, berries <number>, quit")
+                print("""Commands:
+- goto <idx>: move your cursor to the given index
+- delete: delete the item under your cursor
+- split <name>: add a split with the given name
+- subsplit <name>: add a subsplit with the given name
+- rename <name>: rename the split under the cursor
+- overworld: trigger on loading the overworld
+- chapter <numberletter>: trigger on entering the given chapter
+- room <levelname>: trigger on entering the given room
+- checkpoint <number>: trigger on unlocking the given checkpoint (only works in full-game splits)
+- complete: trigger on completing the current chapter
+- cassette: trigger on collecting the chapter's cassette
+- heart: trigger on collecting the chapter's heart
+- berries <number>: trigger on reaching n berries
+- quit: save and quit the editor
+
+See README.md for a discussion of how splits and triggers work
+""")
             else:
                 print("Bad command. Type help for help.")
                 inhibit = True
