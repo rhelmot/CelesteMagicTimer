@@ -6,6 +6,7 @@ import threading
 import time
 import collections
 import random
+import json
 
 # 00 string Level;
 # 08 int Chapter;
@@ -270,6 +271,41 @@ class Route(collections.UserList):
 
             yield (split, split.level)
             prev = split
+
+class JsonRoute(Route):
+    def __init__(self, path_to_route):
+        with open(path_to_route) as f:
+            decoded_json = json.load(f)
+        name = decoded_json["name"]
+        time_field = decoded_json["time_field"]
+        reset_trigger = decoded_json["reset_trigger"]
+        level_names = decoded_json["level_names"]
+        pieces = parsejsonroute(decoded_json["pieces"])
+        super().__init__(name, time_field, pieces, level_names, reset_trigger)
+
+def parsejsonroute(route_json, pieces=[], level=0):
+    if len(route_json) == 0:
+        return None
+    last_split_name = None
+    if route_json[-1]["type"] == "split":
+        last_split_name = route_json[-1]["name"]
+    for count, j_piece in enumerate(route_json):
+        if j_piece["type"] == "split":
+            pieces_last_split_name = parsejsonroute(j_piece["pieces"], pieces, level+1)
+            # don't add a split entry for the last split of a higher level split
+            if count == len(route_json) - 1 and level != 0:
+                break
+            split_names = [j_piece["name"]]
+            if pieces_last_split_name:
+                split_names.append(pieces_last_split_name)
+            split = Split(split_names, level)
+            pieces.append(split)
+        if j_piece["type"] == "trigger":
+            pieces.append(Trigger("whatever", j_piece["trigger"]))
+    if level == 0:
+        return pieces
+    return last_split_name
+
 
 class SplitsManager:
     def __init__(self, asi, route, compare_pb=None, compare_best=None):

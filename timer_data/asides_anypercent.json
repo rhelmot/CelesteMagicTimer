@@ -1,0 +1,444 @@
+{
+    "name": "Any%",
+    "time_field": "file_time",
+    "reset_trigger": null,
+    "level_names": ["Chapter", "Checkpoint"],
+    "pieces": [
+        {
+            "type": "split",
+            "name": "Prologue",
+            "pieces": [
+                {
+                    "type": "trigger",
+                    "trigger": "asi.chapter == 0"
+                },
+                {
+                    "type": "trigger",
+                    "trigger": "asi.chapter == 0 and asi.chapter_complete"
+                },
+                {
+                    "type": "trigger",
+                    "trigger": "asi.chapter == -1"
+                }
+            ]
+        },
+        {
+            "type": "split",
+            "name": "City",
+            "pieces": [
+                {
+                    "type": "split",
+                    "name": "Start",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter == 1"
+                        },
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter_checkpoints == 1"
+                        }
+                    ]
+                },
+                {
+                    "type": "split",
+                    "name": "Crossing",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter_checkpoints == 2"
+                        }
+                    ]
+                },
+                {
+                    "type": "split",
+                    "name": "Chasm",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter == 1 and asi.chapter_complete"
+                        },
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter == -1"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "split",
+            "name": "Old Site",
+            "pieces": [
+                {
+                    "type": "split",
+                    "name": "Start",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter == 2"
+                        },
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter_checkpoints == 1"
+                        }
+                    ]
+                },
+                {
+                    "type": "split",
+                    "name": "Intervention",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter_checkpoints == 2"
+                        }
+                    ]
+                },
+                {
+                    "type": "split",
+                    "name": "Awake",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter == 2 and asi.chapter_complete"
+                        },
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter == -1"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "split",
+            "name": "Resort",
+            "pieces": [
+                {
+                    "type": "split",
+                    "name": "Start",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter == 3"
+                        },
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter_checkpoints == 1"
+                        }
+                    ]
+                },
+                {
+                    "type": "split",
+                    "name": "Huge Mess",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter_checkpoints == 2"
+                        }
+                    ]
+                },
+                {
+                    "type": "split",
+                    "name": "Elevator Shaft",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter_checkpoints == 3"
+                        }
+                    ]
+                },
+                {
+                    "type": "split",
+                    "name": "Presidential Suite",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter == 3 and asi.chapter_complete"
+                        },
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter == -1"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "split",
+            "name": "Ridge",
+            "pieces": [
+                {
+                    "type": "split",
+                    "name": "Start",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter == 4"
+                        },
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter_checkpoints == 1"
+                        }
+                    ]
+                },
+                {
+                    "type": "split",
+                    "name": "Shrine",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter_checkpoints == 2"
+                        }
+                    ]
+                },
+                {
+                    "type": "split",
+                    "name": "Old Trail",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter_checkpoints == 3"
+                        }
+                    ]
+                },
+                {
+                    "type": "split",
+                    "name": "Cliff Face",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter == 4 and asi.chapter_complete"
+                        },
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter == -1"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "split",
+            "name": "Mirror Temple",
+            "pieces": [
+                {
+                    "type": "split",
+                    "name": "Start",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter == 5"
+                        },
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter_checkpoints == 1"
+                        }
+                    ]
+                },
+                {
+                    "type": "split",
+                    "name": "Depths",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter_checkpoints == 2"
+                        }
+                    ]
+                },
+                {
+                    "type": "split",
+                    "name": "Unravelling",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter_checkpoints == 3"
+                        }
+                    ]
+                },
+                {
+                    "type": "split",
+                    "name": "Search",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter_checkpoints == 4"
+                        }
+                    ]
+                },
+                {
+                    "type": "split",
+                    "name": "Rescue",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter == 5 and asi.chapter_complete"
+                        },
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter == -1"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "split",
+            "name": "Reflection",
+            "pieces": [
+                {
+                    "type": "split",
+                    "name": "Start",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter == 6"
+                        },
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter_checkpoints == 1"
+                        }
+                    ]
+                },
+                {
+                    "type": "split",
+                    "name": "Lake",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter_checkpoints == 2"
+                        }
+                    ]
+                },
+                {
+                    "type": "split",
+                    "name": "Hollows",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter_checkpoints == 3"
+                        }
+                    ]
+                },
+                {
+                    "type": "split",
+                    "name": "Reflection",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter_checkpoints == 4"
+                        }
+                    ]
+                },
+                {
+                    "type": "split",
+                    "name": "Rock Bottom",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter_checkpoints == 5"
+                        }
+                    ]
+                },
+                {
+                    "type": "split",
+                    "name": "Resolution",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter == 6 and asi.chapter_complete"
+                        },
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter == -1"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "split",
+            "name": "Summit",
+            "pieces": [
+                {
+                    "type": "split",
+                    "name": "Start",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter == 7"
+                        },
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter_checkpoints == 1"
+                        }
+                    ]
+                },
+                {
+                    "type": "split",
+                    "name": "500m",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter_checkpoints == 2"
+                        }
+                    ]
+                },
+                {
+                    "type": "split",
+                    "name": "1000m",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter_checkpoints == 3"
+                        }
+                    ]
+                },
+                {
+                    "type": "split",
+                    "name": "1500m",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter_checkpoints == 4"
+                        }
+                    ]
+                },
+                {
+                    "type": "split",
+                    "name": "2000m",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter_checkpoints == 5"
+                        }
+                    ]
+                },
+                {
+                    "type": "split",
+                    "name": "2500m",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter_checkpoints == 5"
+                        }
+                    ]
+                },
+                {
+                    "type": "split",
+                    "name": "3000m",
+                    "pieces": [
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter == 7 and asi.chapter_complete"
+                        },
+                        {
+                            "type": "trigger",
+                            "trigger": "asi.chapter == -1"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
