@@ -23,7 +23,7 @@ import random
 # 38 int FileHearts;
 # 40 int CurrentChapterCheckpoints;
 
-asi_path = os.path.join(os.path.dirname(__file__), '../autosplitterinfo')
+asi_path = os.environ.get('ASI_PATH', '/dev/shm/autosplitterinfo')
 
 def split_time(filetime):
     neg = filetime < 0
@@ -97,6 +97,11 @@ class AutoSplitterInfo:
         self.file_strawberries = 0
         self.file_cassettes = 0
         self.file_hearts = 0
+
+        if not os.path.exists(filename):
+            print('waiting for', filename, '...')
+            while not os.path.exists(filename):
+                time.sleep(1)
 
         self.fp = open(filename, 'rb')
         self.live = True

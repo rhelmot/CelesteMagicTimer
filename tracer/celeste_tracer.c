@@ -465,8 +465,10 @@ void *wait_cont_loop(int pid) {
 }
 
 void usage(char *argv0) {
-    printf("Usage: %s --dump <asi path> --launch <celeste path>\n"
-           "OR     sudo %s --dump <asi path> --attach\n",
+    printf("Usage: %s --launch <celeste path>\n"
+           "OR     sudo %s --attach\n"
+           "\n"
+           "You can also provide --dump <path> to override the default /dev/shm/autosplitterinfo\n",
            argv0, argv0);
 }
 
@@ -474,7 +476,7 @@ int main(int argc, char **argv) {
     srand(time(0));
     bool okay = false;
     char *celeste_path = NULL;
-    char *asi_path = NULL;
+    char *asi_path = "/dev/shm/autosplitterinfo";
     int c, option_index;
 
     while (1) {
@@ -519,7 +521,7 @@ int main(int argc, char **argv) {
 
     }
 
-    if (!okay || asi_path == NULL) {
+    if (!okay) {
         usage(argv[0]);
         exit(1);
     }

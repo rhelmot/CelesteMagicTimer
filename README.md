@@ -8,7 +8,7 @@ This is an autosplitter for Celeste on Linux, working on all versions and also w
 The Tracer
 ----------
 
-The first component of the setup is the tracer. This is a program which reads Celeste's memory and dumps out information about the game state to a file. You can build it by typing `make` in the `tracer` folder.
+The first component of the setup is the tracer. This is a program which reads Celeste's memory and dumps out information about the game state to a file, by default `/dev/shm/autosplitterinfo`. You can build it by typing `make` in the `tracer` folder.
 
 The tracer can operate in two modes - one where it launches Celeste itself and thus does not require elevated privileges, and one where you launch it as root and it attaches to the Celeste process. These, along with the path where you want the autosplitter data dumped, are specified on the command line.
 
@@ -21,7 +21,7 @@ Crawling the mono data structures. It's amazing; please don't ask.
 The Timer
 ---------
 
-The `timer` folder contains python scripts that read the autosplitter info file and track splits. The most basic file is `celeste_timer.py`, which simply formats the data to text on the screen. This is useful for verifying that the tracer is working. This file is also a library which provides to the other scripts the ability to access this data, and also some primitives for manipulating splits. There is a convention that the autosplitter data should be stored in `autosplitterinfo` in the root of this repository.
+The `timer` folder contains python scripts that read the autosplitter info file and track splits. The most basic file is `celeste_timer.py`, which simply formats the data to text on the screen. This is useful for verifying that the tracer is working. This file is also a library which provides to the other scripts the ability to access this data, and also some primitives for manipulating splits.
 
 The next-most important script is `full_splits.py`. This is a standard autosplitter program. It takes as input a path to a route file (a pickle dump which contains a `celeste_timer.Route` object), and tracks your pb and gold splits. It uses the convention that routes should be stored in `timer_data/<name>.route` (I've provided a sample anypercent.route), pb data should be stored in `timer_data/<name>.pb`, and gold split data should be stored in `timer_data/<name>.best`. The timer will show you desktop notifications for split status and has keyboard shortcuts for resetting and skipping forward and backwards.
 
