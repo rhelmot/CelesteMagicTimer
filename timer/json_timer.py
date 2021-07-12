@@ -2,33 +2,32 @@
 
 import argparse
 import csv
+import enum
+import json
+import mmap
 import os
 import struct
 import threading
 import time
-import random
-import json
-import mmap
-import enum
 
 # The autosplitter is responsible for reading and parsing a piece of
 #   shared memory from the tracer (see `celeste_tracer.c`). It forks
 #   a thread responsible for scanning this memory on a timer and updates
-#   class attributes. RouteWatcher checks these attributes to see if 
+#   class attributes. RouteWatcher checks these attributes to see if
 #   conditions specified in route triggers are met.
 class AutoSplitter:
     __fmtstring = struct.Struct('8sii???QI??QIIIxxxxI?i100s')
     def __init__(self, filepath, tickrate=0.001):
-        self._all_attrs = ('__level', 'chapter', 'mode', 'timer_active', 
-                'chapter_started', 'chapter_complete', 'chapter_time', 
-                'chapter_strawberries', 'chapter_cassette', 'chapter_heart', 
-                'file_time', 'file_strawberries', 'file_cassettes', 
-                'file_hearts', 'chapter_checkpoints', 'in_cutscene', 
+        self._all_attrs = ('__level', 'chapter', 'mode', 'timer_active',
+                'chapter_started', 'chapter_complete', 'chapter_time',
+                'chapter_strawberries', 'chapter_cassette', 'chapter_heart',
+                'file_time', 'file_strawberries', 'file_cassettes',
+                'file_hearts', 'chapter_checkpoints', 'in_cutscene',
                 'death_count', 'level_name')
 
         self.__fp = open(filepath, 'rb')
-        self.__shmem = mmap.mmap(self.__fp.fileno(), 
-                                 self.__fmtstring.size, 
+        self.__shmem = mmap.mmap(self.__fp.fileno(),
+                                 self.__fmtstring.size,
                                  access=mmap.ACCESS_READ)
         self.__tickrate = tickrate
 
@@ -80,8 +79,8 @@ class JsonRoute():
             self.events = []
             # the parser creates splits + events from the route JSON
             self.__parse_json_route(self.route, self.splits, self.events)
-    
-    # A recursive route parser for the non-metadata portion of the 
+
+    # A recursive route parser for the non-metadata portion of the
     #   JSON route format. Returns only error values, `route` and `splits`
     #   are modified in place. Splits are in natural / printing order.
     # The `event` list contains all the events in the order they should
@@ -94,7 +93,7 @@ class JsonRoute():
                 # e.g. we print it in PB file for easy editing
                 split_name = piece["name"]
                 path_to_piece = split_path + split_name
-                
+
                 # the 4th element is reserved for the elapsed time
                 splits.append([path_to_piece, level, split_name, None])
 
@@ -110,7 +109,7 @@ class JsonRoute():
 
                 # the recursive step
                 if "pieces" in piece:
-                    split_counter = self.__parse_json_route(piece["pieces"], splits, events, 
+                    split_counter = self.__parse_json_route(piece["pieces"], splits, events,
                             path_to_piece + "->", split_counter, level+1)
 
                 # finally, end the split we started above
@@ -127,7 +126,7 @@ class JsonRoute():
 # The core livesplit class: walks a route tree waiting for triggers to fire
 # updating splits as it goes, calling out to a print function every `timeout`
 #
-# Implementation note: because we scan only every 0.01s (by default), it's 
+# Implementation note: because we scan only every 0.01s (by default), it's
 # very important that splits never have triggers as siblings in the JSON. They
 # can take enough time that we miss the starting frame of the split. Without
 # sibling triggers, splits will start automatically when the previous split
@@ -209,7 +208,7 @@ class PersonalBest():
             with open(self.filepath, newline="") as f:
                 reader = csv.reader(f)
                 for line in reader:
-                    self.splits.append([line[0], float(line[1]), float(line[2]), 
+                    self.splits.append([line[0], float(line[1]), float(line[2]),
                                        float(line[3]), int(line[4])])
         except FileNotFoundError:
             pass
@@ -220,7 +219,7 @@ class PersonalBest():
         self.split_pbs = [x[1] for x in self.splits]
         self.pb_splits = [x[2] for x in self.splits]
         self.average_splits = [x[3] for x in self.splits]
-        
+
         # these will be zero if the PB file doesn't exist yet
         # important to check truthiness when using
         self.pb = sum(self.pb_splits)
@@ -260,7 +259,7 @@ class PersonalBest():
             writer = csv.writer(f)
             for row in self.splits:
                 writer.writerow(row)
-        
+
         # update cached values
         self.generate_cached_values()
 
@@ -273,7 +272,7 @@ class PersonalBest():
                 writer.writerow([row[0], row[3], row[3], row[3], 1])
 
 
-# The default implementation of a splits printer; allows comparing with a PB 
+# The default implementation of a splits printer; allows comparing with a PB
 #   file, see `PersonalBest` for implementation.
 # Different implementations of this class are possible, e.g. some kind of GUI
 class SplitsPrinter():
@@ -282,7 +281,7 @@ class SplitsPrinter():
         self.compare_pb = compare_pb
         self.compare_splits = compare_splits
         self.compare_average = compare_average
-        
+
         # handle case where pb file is empty
         if self.pb.pb == 0:
             self.compare_pb = False
@@ -297,7 +296,7 @@ class SplitsPrinter():
         mins %= 60
         if hrs > 0:
             return f"{hrs}:{mins:02}:{secs:06.3f}"
-        elif mins > 0:
+        if mins > 0:
             return f"{mins}:{secs:06.3f}"
         return f"{secs:.3f}"
 
@@ -343,7 +342,7 @@ class SplitsPrinter():
                 fmt_time = self.get_hms_from_msecs(self.pb.average_splits[i])
                 line += f" {fmt_time.rjust(11)}"
             print(line)
-        
+
         # footer containing the time for the whole file
         fmt_time = self.get_hms_from_msecs(asi.file_time)
         line = f"{route.name.ljust(max_name_len)} {fmt_time.rjust(11)}"
