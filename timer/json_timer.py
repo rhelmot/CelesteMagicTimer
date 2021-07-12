@@ -155,7 +155,7 @@ class RouteWatcher():
         asi = self.asi
         while not eval(trigger):
             time.sleep(self.timeout)
-            self.callback(self.asi, self.route, self.activesplits, self.splittime)
+            self.callback(self.asi, self.activesplits, self.splittime)
             # Should this only run every 0.1 or something?
             if eval(self.route.reset_trigger):
                 self.needsreset = True
@@ -188,7 +188,7 @@ class RouteWatcher():
                     self.watch()
                     return
 
-            self.callback(self.asi, self.route, self.activesplits, self.splittime)
+            self.callback(self.asi, self.activesplits, self.splittime)
 
 # A wrapper around a simple CSV format to handle PB information
 #
@@ -275,12 +275,35 @@ class PersonalBest():
 # The default implementation of a splits printer; allows comparing with a PB
 #   file, see `PersonalBest` for implementation.
 # Different implementations of this class are possible, e.g. some kind of GUI
+# Note that instances of this class are route specific because they require a
+# PB instance, which wraps a route specific PB file.
 class SplitsPrinter():
     def __init__(self, pb, compare_pb=False, compare_splits=True, compare_average=False):
         self.pb = pb
+        self.route = pb.route
         self.compare_pb = compare_pb
         self.compare_splits = compare_splits
         self.compare_average = compare_average
+
+        # this value is prepended to each additional indendation level
+        self.padding = "  "
+
+        # split[1] is the indentation, split[2] is the split name
+        max_padding = len(self.padding) * max([x[1] for x in pb.route.splits])
+        self.max_name_len = max([len(x[2]) for x in pb.route.splits])
+        self.max_name_len = max(self.max_name_len, len(pb.route.name))
+        self.max_name_len += max_padding
+
+        # generate header
+        self.header_text = "Split".ljust(self.max_name_len)
+        self.header_text +=     "        Time"
+        if self.compare_pb:
+            self.header_text += "          PB"
+        if self.compare_splits:
+            self.header_text += "      Splits"
+        if self.compare_average:
+            self.header_text += "     Average"
+        self.header_text += "\n" + "-" * len(self.header_text)
 
         # handle case where pb file is empty
         if self.pb.pb == 0:
@@ -300,38 +323,18 @@ class SplitsPrinter():
             return f"{mins}:{secs:06.3f}"
         return f"{secs:.3f}"
 
-    def print(self, asi, route, activesplits, splittime):
+    def print(self, asi, activesplits, splittime):
         # this magical string resets the terminal
         print("\x1b\x5b\x48\x1b\x5b\x4a", end="")
 
-        # this value is prepended to each additional indendation level
-        padding = "  "
-
-        # split[1] is the indentation, split[2] is the split name
-        max_padding = len(padding) * max([x[1] for x in route.splits])
-        max_name_len = max(max([len(x[2]) for x in route.splits]), len(route.name))
-        max_name_len += max_padding
-
-        # generate header
-        header_text = "Split".ljust(max_name_len)
-        header_text +=     "        Time"
-        if self.compare_pb:
-            header_text += "          PB"
-        if self.compare_splits:
-            header_text += "      Splits"
-        if self.compare_average:
-            header_text += "     Average"
-        print(header_text)
-        print("-" * len(header_text))
-
-        for i, split in enumerate(route.splits):
-            split_padding = padding * split[1]
+        for i, split in enumerate(self.route.splits):
+            split_padding = self.padding * split[1]
             fmt_time = ""
             if i in activesplits:
                 fmt_time = self.get_hms_from_msecs(asi.file_time - splittime[i])
             elif split[3]:
                 fmt_time = self.get_hms_from_msecs(split[3])
-            line = f"{(split_padding + split[2]).ljust(max_name_len)} {fmt_time.rjust(11)}"
+            line = f"{(split_padding + split[2]).ljust(self.max_name_len)} {fmt_time.rjust(11)}"
             if self.compare_pb:
                 fmt_time = self.get_hms_from_msecs(self.pb.pb_splits[i])
                 line += f" {fmt_time.rjust(11)}"
@@ -345,7 +348,7 @@ class SplitsPrinter():
 
         # footer containing the time for the whole file
         fmt_time = self.get_hms_from_msecs(asi.file_time)
-        line = f"{route.name.ljust(max_name_len)} {fmt_time.rjust(11)}"
+        line = f"{self.route.name.ljust(self.max_name_len)} {fmt_time.rjust(11)}"
         if self.compare_pb:
             fmt_time = self.get_hms_from_msecs(self.pb.pb)
             line += f" {fmt_time.rjust(11)}"
@@ -355,7 +358,7 @@ class SplitsPrinter():
         if self.compare_average:
             fmt_time = self.get_hms_from_msecs(self.pb.sum_average_splits)
             line += f" {fmt_time.rjust(11)}"
-        print("-" * len(header_text))
+        print("-" * len(self.header_text))
         print(line)
 
 
