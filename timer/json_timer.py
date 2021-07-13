@@ -211,24 +211,26 @@ class RouteWatcher():
 
     # Watch the list of events, pausing at triggers until the condition is met
     # Calls the print callback every `timeout` seconds
-    # FIXME: implement this with an index instead of a loop so that we can impl undo
+    # returns True if event list is completed, false if returning for other reason
     def watch(self):
-        for event in self.route.events:
-            if event.type == EventType.START_SPLIT:
-                event.event.active = True
-                event.event.start_time = self.asi.file_time
-            elif event.type == EventType.END_SPLIT:
-                time_elapsed = self.asi.file_time - event.event.start_time
-                event.event.elapsed_time = time_elapsed
-                event.event.active = False
-            elif event.type == EventType.TRIGGER:
-                self.triggerwait(event.event.trigger)
-                if self.needsreset:
-                    self.reset()
-                    self.watch()
-                    return
-
+        try:
+            for event in self.route.events:
+                if event.type == EventType.START_SPLIT:
+                    event.event.active = True
+                    event.event.start_time = self.asi.file_time
+                elif event.type == EventType.END_SPLIT:
+                    time_elapsed = self.asi.file_time - event.event.start_time
+                    event.event.elapsed_time = time_elapsed
+                    event.event.active = False
+                elif event.type == EventType.TRIGGER:
+                    self.triggerwait(event.event.trigger)
+                    if self.needsreset:
+                        return False
             self.callback(self.asi)
+        except KeyboardInterrupt:
+            return False
+
+        return True
 
 # A wrapper around a simple CSV format to handle PB information
 #
@@ -267,13 +269,13 @@ class PersonalBest():
 
         # these will be zero if the PB file doesn't exist yet
         # important to check truthiness when using
-        self.pb = sum(self.pb_splits)
-
         # important: only include top level splits in sum
+        self.pb = 0
         self.sum_split_pbs = 0
         self.sum_average_splits = 0
         for i in range(len(self.splits)):
             if self.route.splits[i].level == 0:
+                self.pb += self.pb_splits[i]
                 self.sum_split_pbs += self.split_pbs[i]
                 self.sum_average_splits += self.average_splits[i]
 
@@ -285,19 +287,23 @@ class PersonalBest():
             return
 
         # otherwise compare with existing PB times
-        total_time = sum([sp.elapsed_time for sp in new_splits])
+        total_time = None
+        # only have total time if the route was actually completed
+        if not None in [sp.elapsed_time for sp in new_splits]:
+            total_time = sum([sp.elapsed_time for sp in new_splits if sp.level == 0])
         for i, newsplit in enumerate(new_splits):
             # update split PB if improved
-            if newsplit.elapsed_time < self.splits[i][1]:
+            if newsplit.elapsed_time and newsplit.elapsed_time < self.splits[i][1]:
                 self.splits[i][1] = newsplit.elapsed_time
             # update PB splits if overall PB
-            if total_time < self.pb:
+            if total_time and total_time < self.pb:
                 self.splits[i][2] = newsplit.elapsed_time
-            # update average splits (unconditionally)
-            self.splits[i][3] = ((self.splits[i][3] * self.splits[i][4] + newsplit.elapsed_time) /
-                                 (self.splits[i][4] + 1))
-            # update count (used to calculate averages)
-            self.splits[i][4] += 1
+            # update average splits
+            if newsplit.elapsed_time:
+                self.splits[i][3] = ((self.splits[i][3] * self.splits[i][4] + newsplit.elapsed_time) /
+                                    (self.splits[i][4] + 1))
+                # update count (used to calculate averages)
+                self.splits[i][4] += 1
 
         # write to file
         with open(self.filepath, "w", newline="") as f:
@@ -421,15 +427,18 @@ def main():
     parser = argparse.ArgumentParser(description="A simple Celeste timer with a JSON route format.")
     parser.add_argument("--asi", default="/dev/shm/autosplitterinfo",
                         help="path to the auto splitter file created by the tracer")
-    parser.add_argument("--pb", help="path to a custom PB file for the route", default=None)
+    parser.add_argument("--pb-file", help="path to a custom PB file for the route", default=None)
+    parser.add_argument("--pb", help="compare against your PB", action="store_true", default=False)
+    parser.add_argument("--splits", help="compare against your best splits", action="store_true", default=False)
+    parser.add_argument("--average", help="compare against your average time", action="store_true", default=False)
     parser.add_argument("route", help="path to your route.json file")
     args = parser.parse_args()
 
-    if not args.pb:
+    if not args.pb_file:
         if args.route[-5:] == ".json":
-            args.pb = args.route[:-5] + ".pb"
+            args.pb_file = args.route[:-5] + ".pb"
         else:
-            args.pb = args.route + ".pb"
+            args.pb_file = args.route + ".pb"
 
     # wait until the tracer is started if necessary
     if not os.path.exists(args.asi):
@@ -439,12 +448,21 @@ def main():
 
     asi = AutoSplitter(args.asi)
     route = JsonRoute(args.route)
-    pb = PersonalBest(args.pb, route)
-    printer = SplitsPrinter(pb)
+    pb = PersonalBest(args.pb_file, route)
+    printer = SplitsPrinter(pb, args.pb, args.splits, args.average)
     watcher = RouteWatcher(route, asi, printer)
-    # FIXME: this should probably keep listening for the reset trigger on completion
-    watcher.watch()
-    pb.update(route.splits)
+
+    # loop forever; maybe consider putting this behind an option
+    while True:
+        result = watcher.watch()
+        # wait for reset trigger before restarting
+        try:
+            watcher.triggerwait("False")
+        except KeyboardInterrupt:
+            pb.update(route.splits)
+            break
+        pb.update(route.splits)
+        watcher.reset()
 
 if __name__ == '__main__':
     main()
