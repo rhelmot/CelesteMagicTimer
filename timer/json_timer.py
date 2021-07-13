@@ -30,7 +30,7 @@ class AutoSplitter:
         self.__shmem = mmap.mmap(self.__fp.fileno(),
                                  self.__fmtstring.size,
                                  access=mmap.ACCESS_READ)
-        
+
         self.__tickrate = tickrate
         self.__thread = threading.Thread(target=self.update_loop)
         self.__thread.daemon = True
@@ -73,7 +73,7 @@ class EventType(enum.Enum):
 # class wraps this and contains a reference under the `event` attribte.
 class Event():
     def __init__(self, ev_obj, ev_type):
-        self.event = ev_obj 
+        self.event = ev_obj
         self.type = ev_type
 
 # The Split class uniquely refers to a split as defined in a Route file
@@ -88,7 +88,7 @@ class Split():
         # to a particular split, e.g. `City->Crossing`
         #
         # It is likely but not guaranteed to be unique. It is only used to
-        # provide a visual identifier to the user, e.g. in PB files. 
+        # provide a visual identifier to the user, e.g. in PB files.
         self.path_to_piece = path_to_piece
 
         # The highest level splits contain all the other splits, so their
@@ -153,10 +153,10 @@ class JsonRoute():
                 # the recursive step
                 if "pieces" in piece:
                     self.__parse_json_route(
-                            route = piece["pieces"], 
-                            splits = splits, 
+                            route = piece["pieces"],
+                            splits = splits,
                             events = events,
-                            split_path = path_to_piece + "->", 
+                            split_path = path_to_piece + "->",
                             level = level + 1
                     )
 
@@ -187,6 +187,7 @@ class RouteWatcher():
         self.callback = printer.print
         self.timeout = timeout
         self.needsreset = False
+        self.started = False
 
     # A simple utility function to wait for a trigger to fire
     # FIXME: add some checks for handling keyboard input
@@ -198,11 +199,12 @@ class RouteWatcher():
             time.sleep(self.timeout)
             self.callback(self.asi)
             # Should this only run every 0.1 or something?
-            if self.route.reset_trigger and eval(self.route.reset_trigger):
+            if self.started and self.route.reset_trigger and eval(self.route.reset_trigger):
                 self.needsreset = True
                 return
 
     def reset(self):
+        self.started = False
         self.needsreset = False
         for split in self.route.splits:
             split.elapsed_time = None
@@ -224,9 +226,11 @@ class RouteWatcher():
                     event.event.active = False
                 elif event.type == EventType.TRIGGER:
                     self.triggerwait(event.event.trigger)
+                    self.started = True
                     if self.needsreset:
                         return False
-            self.callback(self.asi)
+                self.callback(self.asi)
+                # only set `started` after the first event fires, prevents repeated resetting
         except KeyboardInterrupt:
             return False
 
@@ -317,14 +321,17 @@ class PersonalBest():
     # make a new PB file from scratch
     # times for each split are the same since we only have one run
     def make_new_pb_file(self, new_splits):
+        # don't save initial splits if route hasn't been completed
+        if None in [sp.elapsed_time for sp in new_splits]:
+            return
         with open(self.filepath, "w", newline="") as f:
             writer = csv.writer(f)
             for split in new_splits:
                 writer.writerow([
-                        split.path_to_split, 
-                        split.elapsed_time, 
-                        split.elapsed_time, 
-                        split.elapsed_time, 
+                        split.path_to_piece,
+                        split.elapsed_time,
+                        split.elapsed_time,
+                        split.elapsed_time,
                         1
                 ])
 
@@ -434,6 +441,7 @@ def main():
     parser.add_argument("route", help="path to your route.json file")
     args = parser.parse_args()
 
+    # default pb file is just the route path (with .json extension removed) + .pb
     if not args.pb_file:
         if args.route[-5:] == ".json":
             args.pb_file = args.route[:-5] + ".pb"
