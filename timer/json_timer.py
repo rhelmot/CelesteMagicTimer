@@ -25,12 +25,13 @@ class AutoSplitter:
                 'file_hearts', 'chapter_checkpoints', 'in_cutscene',
                 'death_count', 'level_name')
 
+        # using mmap should be faster as it avoids overhead from calling read
         self.__fp = open(filepath, 'rb')
         self.__shmem = mmap.mmap(self.__fp.fileno(),
                                  self.__fmtstring.size,
                                  access=mmap.ACCESS_READ)
+        
         self.__tickrate = tickrate
-
         self.__thread = threading.Thread(target=self.update_loop)
         self.__thread.daemon = True
         self.__thread.start()
@@ -39,6 +40,8 @@ class AutoSplitter:
         self.__shmem.close()
         self.__fp.close()
 
+    # returns a dict with the total state of the auto splitter encapsulated
+    # avoid using this except for debugging, it's probably slow
     @property
     def state(self):
         return dict(zip(self._all_attrs, [getattr(self, attr) for attr in self._all_attrs]))
@@ -49,6 +52,7 @@ class AutoSplitter:
             for attr, val in zip(self._all_attrs, self.__fmtstring.unpack(self.__shmem)):
                 setattr(self, attr, val)
 
+            # is it okay to mutate these?
             self.chapter_time //= 10000
             self.file_time //= 10000
             self.level_name = self.level_name.split(b'\0')[0].decode()
@@ -57,10 +61,54 @@ class AutoSplitter:
             if timeout > 0:
                 time.sleep(timeout)
 
-class RouteEvent(enum.Enum):
+
+# We need a nice verbose way to refer to event types
+class EventType(enum.Enum):
     START_SPLIT = enum.auto()
     END_SPLIT = enum.auto()
     TRIGGER = enum.auto()
+
+# both Splits and Triggers are really types of events, but the same
+# event can occur multiple times with a different type, so the Event
+# class wraps this and contains a reference under the `event` attribte.
+class Event():
+    def __init__(self, ev_obj, ev_type):
+        self.event = ev_obj 
+        self.type = ev_type
+
+# The Split class uniquely refers to a split as defined in a Route file
+# and should be passed wherever needed. The same split can occur multiple
+# times (e.g. with different properties) as an Event.
+class Split():
+    def __init__(self, path_to_piece, name, level=0):
+        self.name = name
+
+        # path_to_piece is implementation-defined by the Route format
+        # it stores a string representing the path through the route tree
+        # to a particular split, e.g. `City->Crossing`
+        #
+        # It is likely but not guaranteed to be unique. It is only used to
+        # provide a visual identifier to the user, e.g. in PB files. 
+        self.path_to_piece = path_to_piece
+
+        # The highest level splits contain all the other splits, so their
+        # sum is equal to the time for the whole route. This value can also
+        # be used by splits printer to indent subsplits.
+        self.level = level
+
+        # These attributes are updated to provide a timer
+        self.start_time = None
+        self.elapsed_time = None
+
+        # Indicate whether a split is marked as complete or not
+        self.active = False
+
+# Dumb implementation just to allow wrapping with Event, but we should make it
+# more extensive in the future, e.g. by moving away from the `eval` based triggers.
+class Trigger():
+    def __init__(self, trigger):
+        self.trigger = trigger
+
 
 # implements a JSON based route format
 # see `anypercent.json` for example syntax
@@ -73,7 +121,6 @@ class JsonRoute():
             self.reset_trigger = data.get("reset_trigger") # optional
             self.route = data["pieces"]
             # contains a list of splits in printing order
-            # [path_to_piece, level, split_name, elapsed_time=None]
             self.splits = []
             # contains splits + triggers in run order
             self.events = []
@@ -86,42 +133,41 @@ class JsonRoute():
     # The `event` list contains all the events in the order they should
     #   happen in the run. This is used by the watcher to run through linearly.
     #   There is an event for both the start and end of a split.
-    def __parse_json_route(self, route, splits, events, split_path="", split_counter=0, level=0):
+    def __parse_json_route(self, route, splits, events, split_path="", level=0):
         for piece in route:
             if piece["type"] == "split":
                 # used to make things easy for users only
                 # e.g. we print it in PB file for easy editing
-                split_name = piece["name"]
-                path_to_piece = split_path + split_name
+                path_to_piece = split_path + piece["name"]
 
-                # the 4th element is reserved for the elapsed time
-                splits.append([path_to_piece, level, split_name, None])
+                split = Split(
+                        path_to_piece = path_to_piece,
+                        name = piece["name"],
+                        level = level
+                )
 
-                # when we encounter a split for the first time, we start
-                # a timer for the split, so add a start_split event
-                piece["split"] = split_counter
-                events.append((RouteEvent.START_SPLIT, split_counter))
-
-                # we need to keep track of the counter because the same split
-                # will need to be ended after we finish recursion
-                split_at_current_depth = split_counter
-                split_counter += 1
+                splits.append(split)
+                split_event = Event(split, EventType.START_SPLIT)
+                events.append(split_event)
 
                 # the recursive step
                 if "pieces" in piece:
-                    split_counter = self.__parse_json_route(piece["pieces"], splits, events,
-                            path_to_piece + "->", split_counter, level+1)
+                    self.__parse_json_route(
+                            route = piece["pieces"], 
+                            splits = splits, 
+                            events = events,
+                            split_path = path_to_piece + "->", 
+                            level = level + 1
+                    )
 
                 # finally, end the split we started above
-                events.append((RouteEvent.END_SPLIT, split_at_current_depth))
+                split_event_end = Event(split, EventType.END_SPLIT)
+                events.append(split_event_end)
 
             elif piece["type"] == "trigger":
-                events.append((RouteEvent.TRIGGER, piece["trigger"]))
-
-        # the return value is needed when recursing because integers don't impl copy
-        if level != 0:
-            return split_counter
-        return None
+                trigger = Trigger(piece["trigger"])
+                trigger_event = Event(trigger, EventType.TRIGGER)
+                events.append(trigger_event)
 
 # The core livesplit class: walks a route tree waiting for triggers to fire
 # updating splits as it goes, calling out to a print function every `timeout`
@@ -140,11 +186,6 @@ class RouteWatcher():
         self.asi = asi
         self.callback = printer.print
         self.timeout = timeout
-        # every split that is currently being timed
-        # FIXME: this is small, but maybe still faster to use a set()?
-        self.activesplits = []
-        # contains the asi start time for every started split
-        self.splittime = {}
         self.needsreset = False
 
     # A simple utility function to wait for a trigger to fire
@@ -152,47 +193,46 @@ class RouteWatcher():
     # FIXME: using `eval` here might be slow(?) and also means that the user
     # needs to trust the province of their route.json files. Could be improved.
     def triggerwait(self, trigger):
-        asi = self.asi
+        asi = self.asi # do not delete: can be referenced by `eval`
         while not eval(trigger):
             time.sleep(self.timeout)
-            self.callback(self.asi, self.activesplits, self.splittime)
+            self.callback(self.asi)
             # Should this only run every 0.1 or something?
-            if eval(self.route.reset_trigger):
+            if self.route.reset_trigger and eval(self.route.reset_trigger):
                 self.needsreset = True
                 return
 
     def reset(self):
         self.needsreset = False
-        self.splittime = {}
-        self.activesplits = []
         for split in self.route.splits:
-            split[3] = None
+            split.elapsed_time = None
+            split.start_time = None
+            split.active = False
 
     # Watch the list of events, pausing at triggers until the condition is met
     # Calls the print callback every `timeout` seconds
     # FIXME: implement this with an index instead of a loop so that we can impl undo
     def watch(self):
         for event in self.route.events:
-            if event[0] == RouteEvent.START_SPLIT:
-                self.activesplits.append(event[1])
-                self.splittime[event[1]] = self.asi.file_time
-            elif event[0] == RouteEvent.END_SPLIT:
-                # split[3] stores the elapsed time for completed splits
-                time_elapsed = self.asi.file_time - self.splittime[event[1]]
-                self.route.splits[event[1]][3] = time_elapsed
-                self.activesplits.remove(event[1])
-            elif event[0] == RouteEvent.TRIGGER:
-                self.triggerwait(event[1])
+            if event.type == EventType.START_SPLIT:
+                event.event.active = True
+                event.event.start_time = self.asi.file_time
+            elif event.type == EventType.END_SPLIT:
+                time_elapsed = self.asi.file_time - event.event.start_time
+                event.event.elapsed_time = time_elapsed
+                event.event.active = False
+            elif event.type == EventType.TRIGGER:
+                self.triggerwait(event.event.trigger)
                 if self.needsreset:
                     self.reset()
                     self.watch()
                     return
 
-            self.callback(self.asi, self.activesplits, self.splittime)
+            self.callback(self.asi)
 
 # A wrapper around a simple CSV format to handle PB information
 #
-# format is in the same order as the internal `route.splits` list:
+# format of the CSV file is as follows:
 # [path_to_piece, split_pb_time, pb_time, split_average, split_count]
 #
 # `split_pb_time` is the best time for that split, `pb_time` means
@@ -208,8 +248,13 @@ class PersonalBest():
             with open(self.filepath, newline="") as f:
                 reader = csv.reader(f)
                 for line in reader:
-                    self.splits.append([line[0], float(line[1]), float(line[2]),
-                                       float(line[3]), int(line[4])])
+                    self.splits.append([
+                            line[0],        # path_to_piece
+                            float(line[1]), # split_pb_time
+                            float(line[2]), # pb_split_time
+                            float(line[3]), # split_average_time
+                            int(line[4])    # split_count
+                    ])
         except FileNotFoundError:
             pass
         self.generate_cached_values()
@@ -228,7 +273,7 @@ class PersonalBest():
         self.sum_split_pbs = 0
         self.sum_average_splits = 0
         for i in range(len(self.splits)):
-            if self.route.splits[i][1] == 0:
+            if self.route.splits[i].level == 0:
                 self.sum_split_pbs += self.split_pbs[i]
                 self.sum_average_splits += self.average_splits[i]
 
@@ -240,16 +285,16 @@ class PersonalBest():
             return
 
         # otherwise compare with existing PB times
-        total_time = sum([x[3] for x in new_splits])
+        total_time = sum([sp.elapsed_time for sp in new_splits])
         for i, newsplit in enumerate(new_splits):
             # update split PB if improved
-            if newsplit[1] < self.splits[i][1]:
-                self.splits[i][1] = newsplit[3]
+            if newsplit.elapsed_time < self.splits[i][1]:
+                self.splits[i][1] = newsplit.elapsed_time
             # update PB splits if overall PB
             if total_time < self.pb:
-                self.splits[i][2] = newsplit[3]
+                self.splits[i][2] = newsplit.elapsed_time
             # update average splits (unconditionally)
-            self.splits[i][3] = ((self.splits[i][3] * self.splits[i][4] + newsplit[3]) /
+            self.splits[i][3] = ((self.splits[i][3] * self.splits[i][4] + newsplit.elapsed_time) /
                                  (self.splits[i][4] + 1))
             # update count (used to calculate averages)
             self.splits[i][4] += 1
@@ -268,8 +313,14 @@ class PersonalBest():
     def make_new_pb_file(self, new_splits):
         with open(self.filepath, "w", newline="") as f:
             writer = csv.writer(f)
-            for row in new_splits:
-                writer.writerow([row[0], row[3], row[3], row[3], 1])
+            for split in new_splits:
+                writer.writerow([
+                        split.path_to_split, 
+                        split.elapsed_time, 
+                        split.elapsed_time, 
+                        split.elapsed_time, 
+                        1
+                ])
 
 
 # The default implementation of a splits printer; allows comparing with a PB
@@ -288,9 +339,9 @@ class SplitsPrinter():
         # this value is prepended to each additional indendation level
         self.padding = "  "
 
-        # split[1] is the indentation, split[2] is the split name
-        max_padding = len(self.padding) * max([x[1] for x in pb.route.splits])
-        self.max_name_len = max([len(x[2]) for x in pb.route.splits])
+        # calculate the largest space that can be occupied by name + padding
+        max_padding = len(self.padding) * max([sp.level for sp in pb.route.splits])
+        self.max_name_len = max([len(sp.name) for sp in pb.route.splits])
         self.max_name_len = max(self.max_name_len, len(pb.route.name))
         self.max_name_len += max_padding
 
@@ -303,7 +354,6 @@ class SplitsPrinter():
             self.header_text += "      Splits"
         if self.compare_average:
             self.header_text += "     Average"
-        self.header_text += "\n" + "-" * len(self.header_text)
 
         # handle case where pb file is empty
         if self.pb.pb == 0:
@@ -323,18 +373,23 @@ class SplitsPrinter():
             return f"{mins}:{secs:06.3f}"
         return f"{secs:.3f}"
 
-    def print(self, asi, activesplits, splittime):
+    def print(self, asi):
         # this magical string resets the terminal
         print("\x1b\x5b\x48\x1b\x5b\x4a", end="")
 
+        # print header (pre-generated)
+        print(self.header_text)
+        print("-" * len(self.header_text))
+
         for i, split in enumerate(self.route.splits):
-            split_padding = self.padding * split[1]
+            split_padding = self.padding * split.level
+            # either the split is currently active, finished, or never active
             fmt_time = ""
-            if i in activesplits:
-                fmt_time = self.get_hms_from_msecs(asi.file_time - splittime[i])
-            elif split[3]:
-                fmt_time = self.get_hms_from_msecs(split[3])
-            line = f"{(split_padding + split[2]).ljust(self.max_name_len)} {fmt_time.rjust(11)}"
+            if split.active:
+                fmt_time = self.get_hms_from_msecs(asi.file_time - split.start_time)
+            elif split.elapsed_time:
+                fmt_time = self.get_hms_from_msecs(split.elapsed_time)
+            line = f"{(split_padding + split.name).ljust(self.max_name_len)} {fmt_time.rjust(11)}"
             if self.compare_pb:
                 fmt_time = self.get_hms_from_msecs(self.pb.pb_splits[i])
                 line += f" {fmt_time.rjust(11)}"
