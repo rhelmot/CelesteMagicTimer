@@ -420,7 +420,7 @@
                     "pieces": [
                         {
                             "type": "trigger",
-                            "trigger": "asi.chapter_checkpoints == 5"
+                            "trigger": "asi.chapter_checkpoints == 6"
                         }
                     ]
                 },
