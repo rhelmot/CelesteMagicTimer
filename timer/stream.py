@@ -165,4 +165,8 @@ def format_stream(sm):
 
 if __name__ == '__main__':
     sys.stdout.write("\x1b]2;streamdisplay\x07")
-    main(sys.argv[1], renderer=functools.partial(print_splits, formatter=format_stream))
+    if len(sys.argv) == 1:
+        print("Please make sure to specify your route file as a command line argument!")
+        sys.exit(1)
+    else:
+        main(sys.argv[1], renderer=functools.partial(print_splits, formatter=format_stream))
