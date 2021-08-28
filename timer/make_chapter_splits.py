@@ -1,3 +1,5 @@
+import pickle
+
 from celeste_timer import *
 
 chapter_names = [

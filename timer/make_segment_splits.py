@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import pickle
+
 from celeste_timer import *
 
 asi = AutoSplitterInfo()
