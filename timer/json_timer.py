@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-
 import argparse
 import csv
+import curses
 import enum
 import json
 import mmap
@@ -138,6 +138,9 @@ class Split():
 
         # Indicate whether a split is marked as complete or not
         self.active = False
+
+        # Store whether the final elapsed time has been printed yet
+        self.final_print = False
 
 # implements a JSON based route format
 # see `anypercent.json` for example syntax
@@ -325,6 +328,8 @@ class PersonalBest():
         # information to reconstruct the route
         self.route = route
         self.splits = []
+        # keep track of whether PB data has been updated since last printing
+        self.updated = True
         try:
             with open(self.filepath, newline='') as f:
                 reader = csv.reader(f)
@@ -393,6 +398,9 @@ class PersonalBest():
         # update cached values
         self.generate_cached_values()
 
+        # indicate to printers, etc., to update their views with new data
+        self.updated = True
+
     # make a new PB file from scratch
     # times for each split are the same since we only have one run
     def make_new_pb_file(self, new_splits):
@@ -421,7 +429,7 @@ class DummyPrinter():
 # Note that instances of this class are route specific because they require a
 # PB instance, which wraps a route specific PB file.
 class SplitsPrinter():
-    def __init__(self, pb, compare_pb, compare_splits, compare_average):
+    def __init__(self, screen, pb, compare_pb, compare_splits, compare_average):
         self.pb = pb
         self.route = pb.route
         self.compare_pb = compare_pb
@@ -453,6 +461,98 @@ class SplitsPrinter():
             self.compare_splits = False
             self.compare_average = False
 
+        # set up our ncurses screen
+        self.screen = screen
+        self.max_y, self.max_x = self.screen.getmaxyx()
+        self._set_up_screen()
+
+    def __print(self, y, x, text, alt_y=None):
+        # detect whether the screen size changed and refresh
+        max_y, max_x = self.screen.getmaxyx()
+        if max_y != self.max_y or max_x != self.max_x:
+            self.max_y, self.max_x = max_y, max_x
+            self._set_up_screen()
+
+        # a bunch of safety checks: trim (or skip) if print is out of bounds
+        if x > max_x:
+            return
+        if x + len(text) > max_x:
+            text = text[:max_x - x - len(text)]
+
+        # handle floating footer
+        if y + 2 >= max_y:
+            if alt_y is not None:
+                if y + 1 >= max_y:
+                    y = alt_y % max_y
+            else:
+                return
+
+        # Unfortunately despite all the care taken above, if you resize the
+        # window too quickly, you can make it smaller faster than the code
+        # responds. So we have to ignore the ncurses error
+        try:
+            self.screen.addstr(y, x, text)
+        except curses.error:
+            pass
+
+    def _set_up_screen(self):
+        self.screen.clear()
+        self.__print(0, 0, self.header_text)
+        self.__print(1, 0, '-' * len(self.header_text))
+
+        # the split names
+        lc = 2
+        for split in self.route.splits:
+            split_padding = self.padding * split.level
+            line = split_padding + split.name
+            self.__print(lc, 0, line)
+            lc += 1
+        self.__print(lc, 0, '-' * len(self.header_text), alt_y=-2)
+
+        col_offset = self.max_name_len
+
+        if self.compare_pb:
+            lc = 2
+            col_offset += 12
+            for split in self.pb.pb_splits:
+                text = self.get_hms_from_msecs(split)
+                self.__print(lc, col_offset, ' ' + text.rjust(11))
+                lc += 1
+            text = self.get_hms_from_msecs(self.pb.pb)
+            lc += 1 # leave an extra line
+            self.__print(lc, col_offset, ' ' + text.rjust(11), alt_y=-1)
+
+        if self.compare_splits:
+            lc = 2
+            col_offset += 12
+            for split in self.pb.split_pbs:
+                text = self.get_hms_from_msecs(split)
+                self.__print(lc, col_offset, ' ' + text.rjust(11))
+                lc += 1
+            text = self.get_hms_from_msecs(self.pb.sum_split_pbs)
+            lc += 1
+            self.__print(lc, col_offset, ' ' + text.rjust(11), alt_y=-1)
+
+        if self.compare_average:
+            lc = 2
+            col_offset += 12
+            for split in self.pb.average_splits:
+                text = self.get_hms_from_msecs(split)
+                self.__print(lc, col_offset, ' ' + text.rjust(11))
+                lc += 1
+            text = self.get_hms_from_msecs(self.pb.sum_average_splits)
+            lc += 1
+            self.__print(lc, col_offset, ' ' + text.rjust(11), alt_y=-1)
+
+        # redraw all the splits
+        for split in self.route.splits:
+            split.final_print = False
+
+        # PB data has now been printed
+        self.pb.updated = False
+        y, x = self.screen.getmaxyx()
+        self.screen.refresh()
+
     def get_hms_from_msecs(self, msecs):
         secs = msecs / 1000
         mins = int(secs) // 60
@@ -470,47 +570,31 @@ class SplitsPrinter():
     # the properties `route` (the Route object for that watcher) and `time`
     # (the current ASI time - either chapter or file - used by the route).
     def print(self, routewatcher):
-        # this magical string resets the terminal
-        print('\x1b\x5b\x48\x1b\x5b\x4a', end='')
+        if self.pb.updated:
+            self._set_up_screen()
 
-        # print header (pre-generated)
-        print(self.header_text)
-        print('-' * len(self.header_text))
+        lc = 2
+        col_offset = self.max_name_len
 
-        for i, split in enumerate(routewatcher.route.splits):
-            split_padding = self.padding * split.level
-            # either the split is currently active, finished, or never active
-            fmt_time = ''
+        for split in routewatcher.route.splits:
+            # print unconditionally if split is active
             if split.active:
-                fmt_time = self.get_hms_from_msecs(routewatcher.time - split.start_time)
-            elif split.elapsed_time:
-                fmt_time = self.get_hms_from_msecs(split.elapsed_time)
-            line = f'{(split_padding + split.name).ljust(self.max_name_len)} {fmt_time.rjust(11)}'
-            if self.compare_pb:
-                fmt_time = self.get_hms_from_msecs(self.pb.pb_splits[i])
-                line += f' {fmt_time.rjust(11)}'
-            if self.compare_splits:
-                fmt_time = self.get_hms_from_msecs(self.pb.split_pbs[i])
-                line += f' {fmt_time.rjust(11)}'
-            if self.compare_average:
-                fmt_time = self.get_hms_from_msecs(self.pb.average_splits[i])
-                line += f' {fmt_time.rjust(11)}'
-            print(line)
+                text = self.get_hms_from_msecs(routewatcher.time - split.start_time)
+                self.__print(lc, col_offset, ' ' + text.rjust(11))
+            # else only print if it's not been printed before
+            elif split.elapsed_time and not split.final_print:
+                text = self.get_hms_from_msecs(split.elapsed_time)
+                self.__print(lc, col_offset, ' ' + text.rjust(11))
+                split.final_print = True
 
-        # footer containing the time for the whole file
-        fmt_time = self.get_hms_from_msecs(routewatcher.time)
-        line = f'{self.route.name.ljust(self.max_name_len)} {fmt_time.rjust(11)}'
-        if self.compare_pb:
-            fmt_time = self.get_hms_from_msecs(self.pb.pb)
-            line += f' {fmt_time.rjust(11)}'
-        if self.compare_splits:
-            fmt_time = self.get_hms_from_msecs(self.pb.sum_split_pbs)
-            line += f' {fmt_time.rjust(11)}'
-        if self.compare_average:
-            fmt_time = self.get_hms_from_msecs(self.pb.sum_average_splits)
-            line += f' {fmt_time.rjust(11)}'
-        print('-' * len(self.header_text))
-        print(line)
+            lc += 1
+
+        lc += 1
+        text = self.get_hms_from_msecs(routewatcher.asi.file_time)
+        line = self.__print(lc, col_offset, ' ' + text.rjust(11), alt_y=-1)
+
+        y, x = self.screen.getmaxyx()
+        self.screen.refresh()
 
 
 def main():
@@ -522,8 +606,13 @@ def main():
     parser.add_argument('--splits', help='compare against your best splits', action='store_true', default=False)
     parser.add_argument('--average', help='compare against your average time', action='store_true', default=False)
     parser.add_argument('--allow-eval', help='allow the route.json file to use eval (warning: insecure and potentially slow)', action='store_true', default=False)
+    parser.add_argument('--debug', help='use debug mode (no normal timer display', action='store_true', default=False)
     parser.add_argument('route', help='path to your route.json file')
     args = parser.parse_args()
+
+    # globally accessible variable to indicate if we're in debug mode
+    global DEBUG
+    DEBUG = args.debug
 
     # default pb file is just the route path (with .json extension removed) + .pb
     if not args.pb_file:
@@ -534,8 +623,6 @@ def main():
 
     route = JsonRoute(args.route, args.allow_eval)
     pb = PersonalBest(args.pb_file, route)
-    printer = SplitsPrinter(pb, args.pb, args.splits, args.average)
-    #printer = DummyPrinter()
 
     # wait until the tracer is started if necessary
     if not os.path.exists(args.asi):
@@ -544,6 +631,16 @@ def main():
             time.sleep(1)
 
     asi = AutoSplitter(args.asi)
+
+    if DEBUG:
+        printer = DummyPrinter()
+    else:
+        screen = curses.initscr()
+        curses.noecho()
+        curses.cbreak()
+        curses.curs_set(0)
+        printer = SplitsPrinter(screen, pb, args.pb, args.splits, args.average)
+
     watcher = RouteWatcher(route, asi, printer)
 
     # loop forever; maybe consider putting this behind an option
@@ -557,6 +654,13 @@ def main():
             break
         pb.update(route.splits)
         watcher.reset()
+
+    if not DEBUG:
+        curses.curs_set(2)
+        curses.nocbreak()
+        curses.echo()
+        curses.endwin()
+
 
 if __name__ == '__main__':
     main()
