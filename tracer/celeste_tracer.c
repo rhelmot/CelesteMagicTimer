@@ -9,6 +9,7 @@
 #include <pthread.h>
 #include <libgen.h>
 #include <dirent.h>
+#include <setjmp.h>
 #include <sys/fcntl.h>
 #include <sys/types.h>
 #include <sys/ptrace.h>
@@ -19,6 +20,9 @@
 #else
 #define DBGPRINT (void)
 #endif
+
+jmp_buf safety;
+bool safety_enabled = false;
 
 int trace_celeste(const char *celeste_path) {
     int pid = fork();
@@ -77,11 +81,17 @@ int load_mem(int pid) {
 void read_mem(int fd, uint64_t addr, void *buf, size_t len) {
     if (lseek(fd, addr, SEEK_SET) == -1) {
         perror("lseek");
+        if (safety_enabled) {
+            longjmp(safety, 0);
+        }
         exit(1);
     }
 
     if (read(fd, buf, len) != (ssize_t)len) {
         perror("read");
+        if (safety_enabled) {
+            longjmp(safety, 0);
+        }
         exit(1);
     }
 }
@@ -141,6 +151,9 @@ uint64_t lookup_class(int memfd, char *name) {
         }
     }
     printf("Could not find class %s\n", name);
+    if (safety_enabled) {
+        longjmp(safety, 0);
+    }
     exit(1);
 }
 
@@ -156,6 +169,9 @@ uint64_t class_static_fields(int memfd, uint64_t klass) {
         }
     }
     puts("No domain has this class loaded");
+    if (safety_enabled) {
+        longjmp(safety, 0);
+    }
     exit(1);
 }
 
@@ -334,12 +350,16 @@ void *dump_info_loop(void *v) {
     int memfd = m->memfd;
     const char *filename = m->filename;
 
-    sleep(2);
     int dumpfd = open(filename, O_RDWR | O_CREAT, 0644);
     if (dumpfd < 0) {
         perror("open info dump file");
         exit(1);
     }
+
+    setjmp(safety);
+    safety_enabled = false;
+    sleep(2);
+
     load_base_info(memfd);
     uint64_t info_addr = locate_autosplitter_info(memfd);
     DBGPRINT("ASI @ %p\n", info_addr);
@@ -353,6 +373,7 @@ void *dump_info_loop(void *v) {
     uint64_t last_level = 0;
     uint64_t last_scene = 0;
     while (1) {
+        safety_enabled = false;
         struct timespec millisecond = {0, 1000000};
         nanosleep(&millisecond, NULL);
         // Extract ASI
@@ -367,6 +388,8 @@ void *dump_info_loop(void *v) {
         } else {
             strncpy(info_buf.LevelName, "", sizeof(info_buf.LevelName));
         }
+
+        safety_enabled = true;
 
         savedata_addr = static_field_qword(memfd, savedata_class, "Instance");
         DBGPRINT("savedata_addr = %p\n", (void*)savedata_addr);
