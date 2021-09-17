@@ -10,7 +10,7 @@ current_room = asi.level_name
 ctx = 'asi.chapter == %d and asi.mode == %d' % (asi.chapter, asi.mode)
 pieces = []
 seen_rooms = {current_room}
-start_trigger = Trigger('start', '%s and asi.chapter_time == 0' % ctx)
+start_trigger = Trigger('start', '%s and asi.chapter_time < 1000' % ctx)
 
 print("Now, please play through the level")
 

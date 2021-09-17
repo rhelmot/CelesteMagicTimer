@@ -7,7 +7,7 @@ from celeste_timer import *
 asi = AutoSplitterInfo()
 
 pieces = []
-start_trigger = Trigger('start', 'asi.chapter == %d and asi.mode == %d and not asi.chapter_started' % (asi.chapter, asi.mode))
+start_trigger = Trigger('start', 'asi.chapter == %d and asi.mode == %d and asi.chapter_time < 1000' % (asi.chapter, asi.mode))
 
 print("Go to the room to split on and type the name of the split.")
 while not asi.chapter_complete:
