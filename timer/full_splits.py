@@ -344,7 +344,7 @@ def format_splits(sm, termsize=True):
     return data.rstrip()
 
 def print_splits(sm, formatter):
-    print('\x1b\x5b\x48\x1b\x5b\x4a' + '\x1b\x5b\x3f\x32\x35\x6c' + formatter(sm), end='')
+    print('\x1b\x5b\x31\x3b\x31\x48' + '\x1b\x5b\x3f\x32\x35\x6c' + formatter(sm), end='')
 
 def main(route, pb=None, best=None, renderer=None):
     if pb is None and best is None and type(route) is str:
@@ -376,6 +376,8 @@ def main(route, pb=None, best=None, renderer=None):
     sm = NotifSplitsManager(asi, route, pb, best)
     listener.start()
     try:
+        print('\x1b\x5b\x48\x1b\x5b\x4a')
+        subprocess.check_call('stty -echo', shell=True)
         while True:
             try:
                 while action_queue:
@@ -407,6 +409,8 @@ def main(route, pb=None, best=None, renderer=None):
                 sm.commit()
                 break
     finally:
+        subprocess.check_call('stty echo', shell=True)
+        print('\x1b\x5b\x33\x34\x68\x1b\x5b\x3f\x32\x35\x68')
         if pb_filename is not None and len(sm.compare_pb) == len(sm.route.splits):
             print('saving', pb_filename)
             show_splits(sm.route, sm.compare_pb)
