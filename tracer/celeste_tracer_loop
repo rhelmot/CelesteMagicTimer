@@ -1,6 +1,6 @@
 #!/bin/sh
 
 while true; do
-	$(dirname $0)/celeste_tracer --attach "$@"
+	$(dirname $0)/celeste_tracer --attach "$@" >/dev/null
 	sleep 5
 done

@@ -59,14 +59,16 @@ def edit(pieces):
             elif args[0] == 'delete':
                 pieces.pop(cursor)
             elif args[0] == 'split':
-                pieces.insert(cursor, Split([' '.join(args[1:])]), level=0)
+                names = [x.strip() for x in ' '.join(args[1:]).split('/')]
+                pieces.insert(cursor, Split(names, level=0))
                 cursor += 1
             elif args[0] == 'subsplit':
-                pieces.insert(cursor, Split([' '.join(args[1:])]), level=1)
+                pieces.insert(cursor, Split([' '.join(args[1:])], level=1))
                 cursor += 1
             elif args[0] == 'rename':
                 if isinstance(pieces[cursor], Split):
-                    pieces[cursor].names[0] = ' '.join(args[1:])
+                    names = [x.strip() for x in ' '.join(args[1:]).split('/')]
+                    pieces[cursor].names = names
                 else:
                     pieces[cursor].name = ' '.join(args[1:])
             elif args[0] == 'overworld':
@@ -117,6 +119,8 @@ def edit(pieces):
 - heart: trigger on collecting the chapter's heart
 - berries <number>: trigger on reaching n berries
 - quit: save and quit the editor
+
+For the split and rename commands, you can specify a name for the implicit subsplit after a slash (/).
 
 See README.md for a discussion of how splits and triggers work
 """)
