@@ -36,6 +36,36 @@ The Route Format
 
 When using `edit_splits.py`, you are given the ability to create a sequence of "triggers" and "splits". During gameplay, the autosplitter keeps track of where in this sequence you are, starting at the beginning and proceeding past each trigger when its condition is met. Whenever you pass a split, the autosplitter will split. The display will show you the splits, but not the triggers.
 
+When using subsplits, it's important to keep in mind that top level splits also serve as subsplits if they are preceded by a subsplit. For example, if you have the following route:
+
+```
+...
+Ridge A
+  Start
+  Shrine
+  Old Trail
+  Cliff Face
+Temple A
+   ....
+```
+
+Your route file will look like the following:
+
+```
+...
+- Trigger to indicate Start was completed
+- Subsplit Start
+- Trigger to indicate Shrine was completed
+- Subsplit Shrine
+- Trigger to indicate Old Trail was completed
+- Subsplit Old Trail
+- Trigger to indicate Cliff Face was completed
+- Split Ridge A/Cliff Face
+...
+```
+
+Since there are only splits wherever the autosplitter should actually split, and when you finish a split with subsplits you are capturing two different levels of timing at once, the final split in this sequence serves as both a subsplit and a normal split. When editing this split with `edit_splits.py`, you can put a slash in the name of the split to indicate that it has two names, first for the top level split and then for the subsplit.
+
 Contributing
 ------------
 
