@@ -92,7 +92,7 @@ def edit(pieces):
                 pieces.insert(cursor, Trigger('%d berries' % berries, 'asi.file_strawberries == %d' % berries))
                 cursor += 1
             elif args[0] == 'room':
-                pieces.insert(cursor, Trigger('Room %s' % args[1], 'asi.level == %r' % args[1]))
+                pieces.insert(cursor, Trigger('Room %s' % args[1], 'asi.level_name == %r' % args[1]))
                 cursor += 1
             elif args[0] == 'checkpoint':
                 cp = int(args[1])
