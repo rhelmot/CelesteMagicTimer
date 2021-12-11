@@ -30,7 +30,9 @@ def main():
             reset_trigger = Trigger('Start chapter', 'asi.chapter == %d and asi.mode == %d and asi.chapter_time < 1000' % (chapter, mode))
         level_names = ['Split', 'Subsplit', 'Subsubsplit']
 
-    pieces = edit(pieces)
+    pieces, level_names_maybe = edit(pieces)
+    if level_names_maybe is not None:
+        level_names = level_names_maybe
 
     route = Route(name, time_field, pieces, level_names, reset_trigger)
     with open(filename, 'wb') as fp:
@@ -39,6 +41,7 @@ def main():
 def edit(pieces):
     cursor = len(pieces)
     inhibit = False
+    level_names = None
     while True:
         if not inhibit:
             for i, piece in enumerate(pieces + ['']):
@@ -98,10 +101,13 @@ def edit(pieces):
                 cp = int(args[1])
                 pieces.insert(cursor, Trigger('Reach checkpoint %d' % cp, 'asi.chapter_checkpoints == %d' % cp))
                 cursor += 1
+            elif args[0] == 'kinds':
+                level_names = [x.strip() for x in ' '.join(args[1:]).split('/')]
+
             elif args[0] == 'quit':
                 if len(pieces) == 0 or type(pieces[-1]) is not Split or pieces[-1].level != 0:
                     raise TypeError("Last piece of route must be a split")
-                return pieces
+                return pieces, level_names
             elif args[0] == 'help':
                 inhibit = True
                 print("""Commands:
@@ -118,6 +124,7 @@ def edit(pieces):
 - cassette: trigger on collecting the chapter's cassette
 - heart: trigger on collecting the chapter's heart
 - berries <number>: trigger on reaching n berries
+- kinds <name>: name how your "segment" and "subsegment" titles appear, separated by a slash
 - quit: save and quit the editor
 
 For the split and rename commands, you can specify a name for the implicit subsplit after a slash (/).

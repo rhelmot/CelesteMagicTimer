@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import sys
 import functools
 from celeste_timer import fmt_time
@@ -88,26 +90,27 @@ def generate_stats(sm, split, level):
 
 
 def format_stream(sm):
-    split_cur_chapter = sm.current_split(0)
-    split_cur_segment = sm.current_split(1)
-    split_prev_chapter = sm.previous_split(0)
-    split_prev_segment = sm.previous_split(1)
-    if not any(subseg == (split_cur_segment, 1) for subseg in sm.route.all_subsegments):
-        split_cur_segment = None
-    if not any(subseg == (split_prev_segment, 1) for subseg in sm.route.all_subsegments):
-        split_prev_segment = None
+    num_levels = max(1, len(sm.route.level_names))
+    splits_cur = [sm.current_split(i) for i in range(num_levels)]
+    splits_prev = [sm.previous_split(i) for i in range(num_levels)]
+    for lvl in range(1, num_levels):
+        if not any(subseg == (splits_cur[lvl], lvl) for subseg in sm.route.all_subsegments):
+            splits_cur[lvl] = None
+        if not any(subseg == (splits_prev[lvl], lvl) for subseg in sm.route.all_subsegments):
+            splits_prev[lvl] = None
 
-    stats_cur_chapter = generate_stats(sm, split_cur_chapter, 0)
-    stats_cur_segment = generate_stats(sm, split_cur_segment, 1)
-    stats_prev_chapter = generate_stats(sm, split_prev_chapter, 0)
-    stats_prev_segment = generate_stats(sm, split_prev_segment, 1)
+    stats_cur = [generate_stats(sm, splits_cur[lvl], lvl) for lvl in range(num_levels)]
+    stats_prev = [generate_stats(sm, splits_prev[lvl], lvl) for lvl in range(num_levels)]
 
     result = []
 
     result.append(sm.route.name)
     result.append('')
 
-    s = stats_prev_chapter if split_prev_segment is None else stats_prev_segment
+    for split, stat in zip(splits_prev, stats_prev):
+        if split is not None or split is splits_prev[0]:
+            s = stat
+            sp = split
     result.append('Timer: %s%s' % (
         NORMAL if not sm.done else GREEN if s['pb_diff'] is None else color_mark(s),
         fmt_time_ex(sm.current_time, True),
@@ -115,51 +118,33 @@ def format_stream(sm):
     result.append('%s PB by %s%s%s' % (
         'Ahead of' if s['pb_diff'] is None or s['pb_diff'] < 0 else 'Behind',
         color_mark(s),
-        fmt_time_ex(s['pb_diff'], split_cur_segment),
+        fmt_time_ex(s['pb_diff'], sp),
         NORMAL,
     ))
     #result.append('Could maybe get: %s' % fmt_time_ex(sm.best_possible_time(), True))
     result.append('')
 
-    result.append('%s: %s%s%s/%s' % (
-        sm.route.level_names[0],
-        color_split(stats_cur_chapter),
-        fmt_time_ex(stats_cur_chapter["atime"], split_cur_chapter),
-        NORMAL,
-        fmt_time_ex(stats_cur_chapter["ptime"], split_cur_chapter)
-    ))
-    result.append('Can save: %s' % fmt_time_ex(stats_cur_chapter['possible_timesave'], split_cur_chapter))
-    result.append('')
+    for name, split, stat in zip(sm.route.level_names, splits_cur, stats_cur):
+        result.append('%s: %s%s%s/%s' % (
+            name,
+            color_split(stat),
+            fmt_time_ex(stat["atime"], split),
+            NORMAL,
+            fmt_time_ex(stat["ptime"], split)
+        ))
+        result.append('Can save: %s' % fmt_time_ex(stat['possible_timesave'], split))
+        result.append('')
 
-    result.append('%s: %s%s%s/%s' % (
-        sm.route.level_names[1],
-        color_split(stats_cur_segment),
-        fmt_time_ex(stats_cur_segment["atime"], split_cur_segment),
-        NORMAL,
-        fmt_time_ex(stats_cur_segment["ptime"], split_cur_segment)
-    ))
-    result.append('Can save: %s' % fmt_time_ex(stats_cur_segment['possible_timesave'], split_cur_segment))
-    result.append('')
-
-
-    result.append('Prev. %s:\nCould save %s\n%s %s%s%s%s\n' % (
-        sm.route.level_names[0],
-        fmt_time_ex(stats_prev_chapter['possible_timesave'], split_prev_chapter),
-        'Saved' if stats_prev_chapter['pb_delta'] is None or stats_prev_chapter['pb_delta'] < 0 else 'Lost',
-        color_split(stats_prev_chapter),
-        fmt_time_ex(stats_prev_chapter['pb_delta'], split_prev_chapter),
-        NORMAL,
-        ' (!!!)' if stats_prev_chapter['gold'] else '',
-    ))
-    result.append('Prev. %s:\nCould save %s\n%s %s%s%s%s' % (
-        sm.route.level_names[1],
-        fmt_time_ex(stats_prev_segment['possible_timesave'], split_prev_segment),
-        'Saved' if stats_prev_segment['pb_delta'] is None or stats_prev_segment['pb_delta'] < 0 else 'Lost',
-        color_split(stats_prev_segment),
-        fmt_time_ex(stats_prev_segment['pb_delta'], split_prev_segment),
-        NORMAL,
-        ' (!!!)' if stats_prev_segment['gold'] else '',
-    ))
+    for name, split, stat in zip(sm.route.level_names, splits_prev, stats_prev):
+        result.append('Prev. %s:\nCould save %s\n%s %s%s%s%s\n' % (
+            name,
+            fmt_time_ex(stat['possible_timesave'], split),
+            'Saved' if stat['pb_delta'] is None or stat['pb_delta'] < 0 else 'Lost',
+            color_split(stat),
+            fmt_time_ex(stat['pb_delta'], split),
+            NORMAL,
+            ' (!!!)' if stat['gold'] else '',
+        ))
 
     return '\n'.join(result)
 
