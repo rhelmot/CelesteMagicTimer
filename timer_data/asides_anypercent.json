@@ -1,0 +1,366 @@
+{
+    "name": "Any%",
+    "time_field": "file_time",
+    "reset_trigger": {
+        "chapter": -1,
+        "file_time": 0
+    },
+    "level_names": ["Chapter", "Checkpoint"],
+    "splits": [
+        {
+            "name": "Prologue",
+            "triggers": [
+                {
+                    "chapter": 0
+                },
+                {
+                    "chapter": 0, 
+                    "chapter_complete": true
+                },
+                {
+                    "menu": true
+                }
+            ]
+        },
+        {
+            "name": "Forsaken City",
+            "splits": [
+                {
+                    "name": "Start",
+                    "triggers": [
+                        {
+                            "chapter": 1
+                        },
+                        {
+                            "chapter_checkpoints": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Crossing",
+                    "triggers": [
+                        {
+                            "chapter_checkpoints": 2
+                        }
+                    ]
+                },
+                {
+                    "name": "Chasm",
+                    "triggers": [
+                        {
+                            "chapter": 1,
+                            "chapter_complete": true
+                        },
+                        {
+                            "menu": true
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Old Site",
+            "splits": [
+                {
+                    "name": "Start",
+                    "triggers": [
+                        {
+                            "chapter": 2
+                        },
+                        {
+                            "chapter_checkpoints": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Intervention",
+                    "triggers": [
+                        {
+                            "chapter_checkpoints": 2
+                        }
+                    ]
+                },
+                {
+                    "name": "Awake",
+                    "triggers": [
+                        {
+                            "chapter": 2,
+                            "chapter_complete": true
+                        },
+                        {
+                            "menu": true
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Celestial Resort",
+            "splits": [
+                {
+                    "name": "Start",
+                    "triggers": [
+                        {
+                            "chapter": 3
+                        },
+                        {
+                            "chapter_checkpoints": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Huge Mess",
+                    "triggers": [
+                        {
+                            "chapter_checkpoints": 2
+                        }
+                    ]
+                },
+                {
+                    "name": "Elevator Shaft",
+                    "triggers": [
+                        {
+                            "chapter_checkpoints": 3
+                        }
+                    ]
+                },
+                {
+                    "name": "Presidential Suite",
+                    "triggers": [
+                        {
+                            "chapter": 3,
+                            "chapter_complete": true
+                        },
+                        {
+                            "menu": true
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Golden Ridge",
+            "splits": [
+                {
+                    "name": "Start",
+                    "triggers": [
+                        {
+                            "chapter": 4
+                        },
+                        {
+                            "chapter_checkpoints": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Shrine",
+                    "triggers": [
+                        {
+                            "chapter_checkpoints": 2
+                        }
+                    ]
+                },
+                {
+                    "name": "Old Trail",
+                    "triggers": [
+                        {
+                            "chapter_checkpoints": 3
+                        }
+                    ]
+                },
+                {
+                    "name": "Cliff Face",
+                    "triggers": [
+                        {
+                            "chapter": 4,
+                            "chapter_complete": true
+                        },
+                        {
+                            "menu": true
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Mirror Temple",
+            "splits": [
+                {
+                    "name": "Start",
+                    "triggers": [
+                        {
+                            "chapter": 5
+                        },
+                        {
+                            "chapter_checkpoints": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Depths",
+                    "triggers": [
+                        {
+                            "chapter_checkpoints": 2
+                        }
+                    ]
+                },
+                {
+                    "name": "Unravelling",
+                    "triggers": [
+                        {
+                            "chapter_checkpoints": 3
+                        }
+                    ]
+                },
+                {
+                    "name": "Search",
+                    "triggers": [
+                        {
+                            "chapter_checkpoints": 4
+                        }
+                    ]
+                },
+                {
+                    "name": "Rescue",
+                    "triggers": [
+                        {
+                            "chapter": 5,
+                            "chapter_complete": true
+                        },
+                        {
+                            "menu": true
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Reflection",
+            "splits": [
+                {
+                    "name": "Start",
+                    "triggers": [
+                        {
+                            "chapter": 6
+                        },
+                        {
+                            "chapter_checkpoints": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "Lake",
+                    "triggers": [
+                        {
+                            "chapter_checkpoints": 2
+                        }
+                    ]
+                },
+                {
+                    "name": "Hollows",
+                    "triggers": [
+                        {
+                            "chapter_checkpoints": 3
+                        }
+                    ]
+                },
+                {
+                    "name": "Reflection",
+                    "triggers": [
+                        {
+                            "chapter_checkpoints": 4
+                        }
+                    ]
+                },
+                {
+                    "name": "Rock Bottom",
+                    "triggers": [
+                        {
+                            "chapter_checkpoints": 5
+                        }
+                    ]
+                },
+                {
+                    "name": "Resolution",
+                    "triggers": [
+                        {
+                            "chapter": 6,
+                            "chapter_complete": true
+                        },
+                        {
+                            "menu": true
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Summit",
+            "splits": [
+                {
+                    "name": "Start",
+                    "triggers": [
+                        {
+                            "chapter": 7
+                        },
+                        {
+                            "chapter_checkpoints": 1
+                        }
+                    ]
+                },
+                {
+                    "name": "500m",
+                    "triggers": [
+                        {
+                            "chapter_checkpoints": 2
+                        }
+                    ]
+                },
+                {
+                    "name": "1000m",
+                    "triggers": [
+                        {
+                            "chapter_checkpoints": 3
+                        }
+                    ]
+                },
+                {
+                    "name": "1500m",
+                    "triggers": [
+                        {
+                            "chapter_checkpoints": 4
+                        }
+                    ]
+                },
+                {
+                    "name": "2000m",
+                    "triggers": [
+                        {
+                            "chapter_checkpoints": 5
+                        }
+                    ]
+                },
+                {
+                    "name": "2500m",
+                    "triggers": [
+                        {
+                            "chapter_checkpoints": 6
+                        }
+                    ]
+                },
+                {
+                    "name": "3000m",
+                    "triggers": [
+                        {
+                            "chapter": 7,
+                            "chapter_complete": true
+                        },
+                        {
+                            "menu": true
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
