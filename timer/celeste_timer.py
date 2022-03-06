@@ -342,7 +342,10 @@ class SplitsManager:
         return self.route.splits[idx]
 
     def previous_split(self, level=0):
-        idx = self._current_split_idx(level)
+        if self.done:
+            idx = len(self.route.splits)
+        else:
+            idx = self._current_split_idx(level)
         idx = self._backwards_split(idx, level)
         if idx is None:
             return None
