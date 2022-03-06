@@ -418,7 +418,9 @@ def main(route, pb=None, best=None, renderer=None):
                 pickle.dump(sm.compare_pb, fp)
         if best_filename is not None:
             print('saving', best_filename)
-            print('sum of best:', fmt_time(sum_of_best(sm.route.splits, sm.compare_best)))
+            sob = sum_of_best(sm.route.splits, sm.compare_best)
+            if sob is not None:
+                print('sum of best:', fmt_time(sob))
             with open(best_filename, 'wb') as fp:
                 pickle.dump(sm.compare_best, fp)
 
