@@ -6,6 +6,8 @@ import threading
 import time
 import collections
 import random
+import pickle
+import yaml
 
 # 00 string Level;
 # 08 int Chapter;
@@ -25,6 +27,52 @@ import random
 
 asi_path = os.environ.get('ASI_PATH', '/dev/shm/autosplitterinfo')
 
+def open_pickle_or_yaml(filename):
+    try:
+        with open(filename, 'rb') as fp:
+            return pickle.load(fp)
+    except pickle.PickleError:
+        try:
+            with open(filename, 'r', encoding='utf-8') as fp:
+                return yaml.load(fp, Loader=MyUnsafeLoader)  # yikes!!
+        except yaml.YAMLError:
+            raise TypeError("Cannot load this file as either pickle or yaml")
+
+def save_yaml(filename, data):
+    with open(filename, 'w', encoding='utf-8') as fp:
+        yaml.dump(data, fp, Dumper=MyDumper)
+
+class MyDumper(yaml.Dumper):
+    def ignore_aliases(self, data):
+        return True
+
+# hack around https://github.com/yaml/pyyaml/issues/620
+class MyUnsafeConstructor(yaml.constructor.UnsafeConstructor):
+    def construct_object(self, node, deep=False):
+        return super().construct_object(node, deep=True)
+
+class MyUnsafeLoader(
+        yaml.reader.Reader,
+        yaml.scanner.Scanner,
+        yaml.parser.Parser,
+        yaml.composer.Composer,
+        MyUnsafeConstructor,
+        yaml.resolver.Resolver
+):
+    def __init__(self, stream):
+        yaml.reader.Reader.__init__(self, stream)
+        yaml.scanner.Scanner.__init__(self)
+        yaml.parser.Parser.__init__(self)
+        yaml.composer.Composer.__init__(self)
+        MyUnsafeConstructor.__init__(self)
+        yaml.resolver.Resolver.__init__(self)
+
+def represent_pickle(self, data):
+    data_type = type(data)
+    tag = 'tag:yaml.org,2002:python/object:%s.%s' % (data_type.__module__, data_type.__name__)
+    value = data.__getstate__()
+    return self.represent_mapping(tag, value)
+
 def split_time(filetime):
     neg = filetime < 0
     if neg:
@@ -36,6 +84,8 @@ def split_time(filetime):
     return (neg, hr, mi, se, ms)
 
 def fmt_time(tup, ms_decimals=3, full_width=False, sign=False):
+    if tup is None:
+        return None
     if type(tup) is int:
         tup = split_time(tup)
 
@@ -73,6 +123,21 @@ def fmt_time(tup, ms_decimals=3, full_width=False, sign=False):
         sign_str = ''
 
     return sign_str + hr_str + mi_str + se_str + ms_str
+
+def parse_time(string):
+    if string is None:
+        return None
+    try:
+        hms, ms = string.split('.')
+        hr, mi, se = hms.split(':')
+        ms = int(ms)
+        hr = int(hr)
+        mi = int(mi)
+        se = int(se)
+    except Exception as e:
+        raise TypeError("Cannot parse %s as time - expected format is 00:00:00.000") from e
+
+    return ms  + se * 1000 + mi * 1000 * 60 + hr * 1000 * 60 * 60
 
 
 class AutoSplitterInfo:
@@ -204,6 +269,7 @@ class Split:
         if 'name' in state:
             state['names'] = [state.pop('name')]
         self.__dict__.update(state)
+yaml.representer.Representer.add_representer(Split, represent_pickle)
 
 class StartTimer:
     def __repr__(self):
@@ -230,6 +296,61 @@ class SplitsRecord(collections.OrderedDict):
         else:
             return self[split] - self[found_prev]
 
+    def __getstate__(self):
+        return {
+            'version': 1,
+            'splits': {split: fmt_time(time, full_width=True) for split, time in self.items()}
+        }
+
+    def __setstate__(self, state):
+        if type(state) is not dict:
+            raise TypeError("Cannot deserialize this SplitsRecord - are you sure it's a record file?")
+        version = state.get('version', 0)
+        if version == 0:
+            self.__dict__.update(state)
+        elif version == 1:
+            self.__init__({split: parse_time(time) for split, time in state['splits'].items()})
+        else:
+            raise TypeError("Cannot deserialize this SplitsRecord - try updating the autosplitter")
+
+    def update_identity(self, route):
+        """
+        Replace the splits here with the splits from the route with the same identity
+        """
+        collection = dict(self)
+        self.clear()
+        for split in route.splits:
+            self[split] = collection.get(split, None)
+yaml.representer.Representer.add_representer(SplitsRecord, represent_pickle)
+
+
+class GoldsRecord(collections.UserDict):
+    def __getstate__(self):
+        return {
+            'version': 1,
+            'splits': {split: fmt_time(time, full_width=True) for split, time in self.items()}
+        }
+
+    def __setstate__(self, state):
+        if type(state) is not dict:
+            raise TypeError("Cannot deserialize this GoldsRecord - are you sure it's a golds file?")
+        version = state.get('version', 0)
+        if version == 1:
+            self.__init__({split: parse_time(time) for split, time in state['splits'].items()})
+        else:
+            raise TypeError("Cannot deserialize this GoldsRecord - try updating the autosplitter")
+
+    def update_identity(self, route):
+        """
+        Replace the splits here with the splits from the route with the same identity
+        """
+        collection = dict(self)
+        self.clear()
+        for segment in route.all_subsegments:
+            self[segment] = collection.get(segment, None)
+yaml.representer.Representer.add_representer(GoldsRecord, represent_pickle)
+
+
 class Route(collections.UserList):
     def __init__(self, name, time_field, pieces, level_names, reset_trigger):
         if type(pieces[-1]) is not Split or pieces[-1].level != 0:
@@ -243,15 +364,30 @@ class Route(collections.UserList):
         self.reset_trigger = reset_trigger
 
     def __getstate__(self):
-        return (list(self), self.name, self.time_field, self.level_names, self.reset_trigger)
+        return {
+            'version': 1,
+            'name': self.name,
+            'time_field': self.time_field,
+            'level_names': self.level_names,
+            'reset_trigger': self.reset_trigger,
+            'pieces': list(self),
+        }
 
     def __setstate__(self, state):
         if type(state) is dict:
-            self.__dict__.update(state)
+            version = state.get("version", 0)
+            if version == 0:
+                self.__dict__.update(state)
+            elif version == 1:
+                self.__init__(state['name'], state['time_field'], state['pieces'], state['level_names'], state['reset_trigger'])
+            else:
+                raise TypeError("Cannot deserialize this Route - try updating the autosplitter")
         elif len(state) == 3:
             self.__init__(state[1], state[2], state[0], ['Segment', 'Subsegment'], None)
-        else:
+        elif len(state) == 5:
             self.__init__(state[1], state[2], state[0], state[3], state[4])
+        else:
+            raise TypeError("Cannot deserialize this Route - are you sure it's a route file?")
 
     def split_idx(self, i, level=0):
         while type(self[i]) is not Split or self[i].level > level:
@@ -283,6 +419,12 @@ class SplitsManager:
         self.started = False
 
         # migration
+        if type(self.compare_best) is dict:
+            self.compare_best = GoldsRecord(self.compare_best)
+
+        self.compare_pb.update_identity(self.route)
+        self.compare_best.update_identity(self.route)
+
         parents = {}
         for split in self.route.splits:
             parents[split.level] = split
@@ -291,11 +433,6 @@ class SplitsManager:
                 self.compare_pb[split] = None
             else:
                 self.compare_pb.move_to_end(split)
-
-            for level in range(split.level, self.route.levels):
-                key = (split, level)
-                if key not in self.compare_best:
-                    self.compare_best[key] = None
 
     @property
     def done(self):
@@ -383,7 +520,7 @@ class SplitsManager:
                 self.compare_pb = self.current_times
 
         # TODO: do we care about not mutating this reference?
-        self.compare_best = dict(self.compare_best)
+        self.compare_best = GoldsRecord(self.compare_best)
         for key in self.route.all_subsegments:
             split, level = key
             seg = self.current_times.segment_time(split, level, None)

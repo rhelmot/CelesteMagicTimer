@@ -7,7 +7,7 @@ import time
 import functools
 import gi
 import subprocess
-import pickle
+import yaml
 gi.require_version('Notify', '0.7')
 from gi.repository import Notify
 Notify.init("celeste_timer")
@@ -130,11 +130,9 @@ class NotifSplitsManager(SplitsManager):
 
 def show_splits(route, splits):
     if type(route) is str:
-        with open(route, 'rb') as fp:
-            route = pickle.load(fp)
+        route = open_pickle_or_yaml(route)
     if type(splits) is str:
-        with open(splits, 'rb') as fp:
-            splits = pickle.load(fp)
+        splits = open_pickle_or_yaml(splits)
     for split in route.splits:
         stime = splits.segment_time(split, 999)
         ttime = splits[split]
@@ -356,20 +354,17 @@ def main(route, pb=None, best=None, renderer=None):
         renderer = functools.partial(print_splits, formatter=format_splits)
 
     if type(route) is str:
-        with open(route, 'rb') as fp:
-            route = pickle.load(fp)
+        route = open_pickle_or_yaml(route)
     if type(pb) is str:
         pb_filename = pb
         try:
-            with open(pb, 'rb') as fp:
-                pb = pickle.load(fp)
+            pb = open_pickle_or_yaml(pb)
         except FileNotFoundError:
             pb = None
     if type(best) is str:
         best_filename = best
         try:
-            with open(best, 'rb') as fp:
-                best = pickle.load(fp)
+            best = open_pickle_or_yaml(best)
         except FileNotFoundError:
             best = None
 
@@ -414,15 +409,13 @@ def main(route, pb=None, best=None, renderer=None):
         if pb_filename is not None and len(sm.compare_pb) == len(sm.route.splits):
             print('saving', pb_filename)
             show_splits(sm.route, sm.compare_pb)
-            with open(pb_filename, 'wb') as fp:
-                pickle.dump(sm.compare_pb, fp)
+            save_yaml(pb_filename, sm.compare_pb)
         if best_filename is not None:
             print('saving', best_filename)
             sob = sum_of_best(sm.route.splits, sm.compare_best)
             if sob is not None:
                 print('sum of best:', fmt_time(sob))
-            with open(best_filename, 'wb') as fp:
-                pickle.dump(sm.compare_best, fp)
+            save_yaml(best_filename, sm.compare_best)
 
 # finished:
 # Segment name:  1.23/+1.23  1:32.45/+1.23

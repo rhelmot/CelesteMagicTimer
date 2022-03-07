@@ -11,13 +11,12 @@ def main():
         print('Usage: edit_splits.py [route filename]')
     filename = sys.argv[1]
     try:
-        with open(filename, 'rb') as fp:
-            route = pickle.load(fp)
-            pieces = list(route)
-            name = route.name
-            time_field = route.time_field
-            level_names = route.level_names
-            reset_trigger = route.reset_trigger
+        route = open_pickle_or_yaml(filename)
+        pieces = list(route)
+        name = route.name
+        time_field = route.time_field
+        level_names = route.level_names
+        reset_trigger = route.reset_trigger
     except FileNotFoundError:
         pieces = []
         name = input('Route name: ')
@@ -35,8 +34,7 @@ def main():
         level_names = level_names_maybe
 
     route = Route(name, time_field, pieces, level_names, reset_trigger)
-    with open(filename, 'wb') as fp:
-        pickle.dump(route, fp)
+    save_yaml(filename, route)
 
 def edit(pieces):
     cursor = len(pieces)

@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import pickle
-
 from celeste_timer import *
 
 asi = AutoSplitterInfo()
@@ -25,7 +23,6 @@ filename = input("Filename (will go in ../timer_data/<name>.route): ")
 
 route = Route(name, 'chapter_time', pieces, ['Segment'], start_trigger)
 filepath = '../timer_data/%s.route' % filename
-with open(filepath, 'wb') as fp:
-    pickle.dump(route, fp)
+save_yaml(filepath, route)
 
 print('saved to %s' % filepath)
