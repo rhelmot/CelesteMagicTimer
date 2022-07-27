@@ -21,7 +21,9 @@ Crawling the mono data structures. It's amazing; please don't ask.
 The Timer
 ---------
 
-The `timer` folder contains python scripts that read the autosplitter info file and track splits. The most basic file is `celeste_timer.py`, which simply formats the data to text on the screen. This is useful for verifying that the tracer is working. This file is also a library which provides to the other scripts the ability to access this data, and also some primitives for manipulating splits.
+The `timer` folder contains python scripts that read the autosplitter info file and track splits. In order to use them, you'll need the dependencies from `requirements.txt` in the repository root: `pip3 install --user -r requirements.txt`. You can run the scripts with python3, e.g. `python3 celeste_timer.py`.
+
+The most basic file is `celeste_timer.py`, which simply formats the data to text on the screen. This is useful for verifying that the tracer is working. This file is also a library which provides to the other scripts the ability to access this data, and also some primitives for manipulating splits.
 
 The next-most important script is `full_splits.py`. This is a standard autosplitter program. It takes as input a path to a route file (a yaml dump which contains a `celeste_timer.Route` object serialized via pyyaml), and tracks your pb and gold splits. It uses the convention that routes should be stored in `timer_data/<name>.route` (I've provided a sample anypercent.route), pb data should be stored in `timer_data/<name>.pb`, and gold split data should be stored in `timer_data/<name>.best`. The timer will show you desktop notifications for split status and has keyboard shortcuts for resetting and skipping forward and backwards.
 
