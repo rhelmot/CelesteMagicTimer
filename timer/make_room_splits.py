@@ -63,4 +63,5 @@ if __name__ == '__main__':
     print("Now, please play through the level")
     maker.wait_for_playthrough()
     name = input("Route name: ")
-    maker.save_route(route_name=name)
+    filename = ifilename = input("Filename (will go in ../timer_data/<name>.route): ")
+    maker.save_route(route_name=name, file_name=filename)
