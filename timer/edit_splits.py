@@ -4,7 +4,7 @@ import sys
 import pickle
 import traceback
 
-from celeste_timer import *  # pylint: disable=wildcard-import,unused-wildcard-import
+from .celeste_timer import *  # pylint: disable=wildcard-import,unused-wildcard-import
 
 def main():
     if len(sys.argv) != 2:

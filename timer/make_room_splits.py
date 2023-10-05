@@ -1,4 +1,4 @@
-from celeste_timer import *
+from .celeste_timer import *
 
 asi = AutoSplitterInfo()
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from celeste_timer import *
+from .celeste_timer import *
 
 asi = AutoSplitterInfo()
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from celeste_timer import AutoSplitterInfo
+from .celeste_timer import AutoSplitterInfo
 import time
 import argparse
 import subprocess

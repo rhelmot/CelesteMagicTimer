@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from celeste_timer import * # pylint: disable=wildcard-import,unused-wildcard-import
+from .celeste_timer import * # pylint: disable=wildcard-import,unused-wildcard-import
 
 import os
 import time
