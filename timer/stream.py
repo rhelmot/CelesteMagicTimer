@@ -2,8 +2,8 @@
 
 import sys
 import functools
-from celeste_timer import fmt_time
-from full_splits import main, print_splits
+from .celeste_timer import fmt_time
+from .full_splits import main, print_splits
 
 def fmt_time_ex(time, meaningful, sign=False):
     if meaningful is None:

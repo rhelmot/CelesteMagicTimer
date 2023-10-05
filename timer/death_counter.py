@@ -1,6 +1,6 @@
 import time
 from collections import defaultdict
-from celeste_timer import AutoSplitterInfo
+from .celeste_timer import AutoSplitterInfo
 
 asi = AutoSplitterInfo()
 

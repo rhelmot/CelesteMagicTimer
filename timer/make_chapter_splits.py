@@ -1,4 +1,4 @@
-from celeste_timer import *
+from .celeste_timer import *
 
 chapter_names = [
         'Prologue', 'City', 'Site', 'Resort', 'Ridge', 'Temple',
